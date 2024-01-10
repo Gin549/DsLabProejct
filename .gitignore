@@ -1,3 +1,8 @@
+# data files (TOO big)
+data/development.csv
+data/evaluation.csv
+data/sample_submission.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
