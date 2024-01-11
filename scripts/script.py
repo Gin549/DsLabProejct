@@ -12,6 +12,8 @@ from sklearn.multioutput import MultiOutputRegressor
 from warnings import simplefilter
 import seaborn as sns
 from matplotlib import pyplot as plt
+import os
+from pathlib import WindowsPath
 
 simplefilter(action="ignore", category=FutureWarning)
 
@@ -39,7 +41,7 @@ class DumbClassifier:
 def main():
     dev_df, eval_df = get_data()
     analyse_data(dev_df, "DEVELOPMENT")
-    analyse_data(dev_df, "EVALUATION")
+    # analyse_data(dev_df, "EVALUATION")
     regression(dev_df, eval_df)
 
 
@@ -49,10 +51,80 @@ def get_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     return dev_df, eval_df
 
 
-def analyse_data(data: pd.DataFrame, df_name: str):
+def analyse_data(data: pd.DataFrame, df_name: str) -> None:
     print(f"DATAFRAME: {df_name}")
     data.info()
     print(data.describe())
+    type_of_columns = ["negpmax", "pmax", "area", "tmax", "rms"]
+    for type_col in type_of_columns:
+        plot_mean_pmax(data, type_col)
+        save_distributions(data, type_col)
+
+
+def plot_mean_pmax(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
+    path = WindowsPath(f"{os.curdir}\\images\\{prefix}\\heatmap")
+    if path.exists() is False:
+        path.mkdir()
+    elif rewrite is False:
+        # if the folder already exists, then the heatmaps are already present
+        return
+
+    print(f"Saving heatmaps of {prefix}")
+    print(f"\rState: {0}/18", end="")
+    for i in range(18):
+        name_col = f"{prefix}[{i}]"
+        df_plot = data[["x", "y", name_col]]
+        data_heatmap = (
+            df_plot.groupby(["x", "y"])
+            .mean()
+            .reset_index()
+            .pivot(index="y", columns="x", values=name_col)
+        )
+        plot = sns.heatmap(data_heatmap)
+        fig = plot.get_figure()
+        fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.png")
+        fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.pdf")
+        plt.clf()
+        print(f"\rState: {i+1}/18", end="")
+    print()
+
+
+def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
+    path = WindowsPath(f"{os.curdir}/images/{prefix}/")
+    if path.exists() is False:
+        path.mkdir()
+    elif rewrite is False:
+        # if the folder already exists, then the distributions are already present
+        return
+
+    print()
+    print(f"Saving distributions of {prefix}")
+    print(f"\rState: {0}%", end="")
+    name_cols: list[str] = []
+    for i in range(18):
+        if prefix == "negpmax":
+            break
+        plot = sns.histplot(data, x=f"{prefix}[{i}]", kde=True, stat="density")
+        name_cols.append(f"{prefix}[{i}]")
+        fig = plot.get_figure()
+        fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_distr.png")
+        fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_distr.pdf")
+        plot.clear()
+        print(f"\rState: {round(100*(i+1)/18, 0)}%", end="")
+
+    dfm = data.melt(
+        id_vars=["x", "y"],
+        var_name=f"{prefix}",
+        value_name="values",
+        value_vars=name_cols,
+    )
+    plot = sns.boxplot(dfm, y=f"{prefix}", x="values", color=sns.color_palette()[0])
+    fig = plot.get_figure()
+    fig.savefig(f"{path.absolute()}\\{prefix}_boxplot.png")
+    fig.savefig(f"{path.absolute()}\\{prefix}_boxplot.pdf")
+    plot.clear()
+
+    print()
 
 
 def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
@@ -130,10 +202,17 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
 def analyse_feature_importante(
     forest: RandomForestRegressor, features_names: list[str]
 ):
+    # TODO: Check the function
     importances = forest.feature_importances_
     std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
     sns.barplot(y=features_names, x=importances)
     plt.show()
+    print("Features names:")
+    print(features_names)
+    print("Feature Importance:")
+    print(importances)
+    print("Feature importance Variance:")
+    print(std)
 
 
 main()
