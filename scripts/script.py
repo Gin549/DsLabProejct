@@ -55,13 +55,33 @@ def analyse_data(data: pd.DataFrame, df_name: str) -> None:
     print(f"DATAFRAME: {df_name}")
     data.info()
     print(data.describe())
+
+    check_num_event_per_cell(data)
+
     type_of_columns = ["negpmax", "pmax", "area", "tmax", "rms"]
     for type_col in type_of_columns:
-        plot_mean_pmax(data, type_col)
-        save_distributions(data, type_col)
+        save_heatmaps(data, type_col, True)
+        # save_distributions(data, type_col)
 
 
-def plot_mean_pmax(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
+def check_num_event_per_cell(data: pd.DataFrame) -> None:
+    df_plot = data[["x", "y", "pmax[1]"]]
+    data_heatmap = (
+        df_plot.groupby(["x", "y"])
+        .count()
+        .reset_index()
+        .sort_values(by=["x", "y"], ascending=[True, False])
+        .pivot(index="y", columns="x", values="pmax[1]")
+        .sort_index(ascending=False)
+    )
+    data_heatmap_np = data_heatmap.values
+    print("Distinct num of occurances per (x, y):")
+    print(np.unique(data_heatmap_np))
+    sns.heatmap(data_heatmap)
+    plt.show()
+
+
+def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
     path = WindowsPath(f"{os.curdir}\\images\\{prefix}\\heatmap")
     if path.exists() is False:
         path.mkdir()
@@ -78,7 +98,9 @@ def plot_mean_pmax(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> No
             df_plot.groupby(["x", "y"])
             .mean()
             .reset_index()
+            .sort_values(by=["x", "y"], ascending=[True, False])
             .pivot(index="y", columns="x", values=name_col)
+            .sort_index(ascending=False)
         )
         plot = sns.heatmap(data_heatmap)
         fig = plot.get_figure()
