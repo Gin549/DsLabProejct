@@ -14,8 +14,11 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 import os
 from pathlib import WindowsPath
+import time
 
 simplefilter(action="ignore", category=FutureWarning)
+
+NUM_EVENT_PER_POS = 100
 
 
 class DumbClassifier:
@@ -39,16 +42,37 @@ class DumbClassifier:
 
 
 def main():
-    dev_df, eval_df = get_data()
+    dev_df, eval_df = get_sampled_data()
     analyse_data(dev_df, "DEVELOPMENT")
     # analyse_data(dev_df, "EVALUATION")
     regression(dev_df, eval_df)
 
 
-def get_data() -> tuple[pd.DataFrame, pd.DataFrame]:
-    dev_df = pd.read_csv("./data/development.csv", header=0, index_col=False)
+def get_sampled_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    path = WindowsPath(f"{os.curdir}\\data\\development_sampled.csv")
+    if path.exists():
+        dev_df = pd.read_csv(
+            "./data/development_sampled.csv", header=0, index_col=False
+        )
+    else:
+        dev_df = pd.read_csv("./data/development.csv", header=0, index_col=False)
+        dev_df.sort_values(["x", "y"], ascending=[True, True], inplace=True)
+        dev_df = sample_dataframe(dev_df, 0.1)
+        print(dev_df.index)
+        dev_df.to_csv("./data/development_sampled.csv", index=False)
+
     eval_df = pd.read_csv("./data/evaluation.csv", header=0, index_col=False)
+
     return dev_df, eval_df
+
+
+def sample_dataframe(data: pd.DataFrame, ratio_keep: float) -> pd.DataFrame:
+    step = int(1 / ratio_keep)
+    if NUM_EVENT_PER_POS % step != 0:
+        raise ValueError(
+            f"int(1/ratio_keep) has to be a submultiple of a {NUM_EVENT_PER_POS}"
+        )
+    return data.iloc[::step, :]
 
 
 def analyse_data(data: pd.DataFrame, df_name: str) -> None:
@@ -60,8 +84,8 @@ def analyse_data(data: pd.DataFrame, df_name: str) -> None:
 
     type_of_columns = ["negpmax", "pmax", "area", "tmax", "rms"]
     for type_col in type_of_columns:
-        save_heatmaps(data, type_col, True)
-        # save_distributions(data, type_col)
+        save_heatmaps(data, type_col)
+        save_distributions(data, type_col)
 
 
 def check_num_event_per_cell(data: pd.DataFrame) -> None:
@@ -77,8 +101,8 @@ def check_num_event_per_cell(data: pd.DataFrame) -> None:
     data_heatmap_np = data_heatmap.values
     print("Distinct num of occurances per (x, y):")
     print(np.unique(data_heatmap_np))
-    sns.heatmap(data_heatmap)
-    plt.show()
+    # sns.heatmap(data_heatmap)
+    # plt.show()
 
 
 def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
@@ -155,7 +179,7 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
     )
 
     table = PrettyTable()
-    table.field_names = ["model", "Average Euclidean distance"]
+    table.field_names = ["Model", "Average Euclidean distance", "Execution time[s]"]
     regressors = [
         DumbClassifier(),
         RandomForestRegressor(random_state=42, max_features="sqrt"),
@@ -197,12 +221,14 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
     ]
 
     for name_m, regr in zip(names, regressors):
+        start_time = time.time()
         regr.fit(X_train, y_train)
         y_pred = regr.predict(X_val)
         med = (
             np.sqrt(np.sum(np.power(y_val - y_pred, 2), axis=1)).sum() / y_pred.shape[0]
         )
-        row = [name_m, med]
+        end_time = time.time()
+        row = [name_m, med, end_time - start_time]
         table.add_row(row)
         print(row)
 
