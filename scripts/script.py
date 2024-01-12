@@ -1,3 +1,4 @@
+from turtle import color
 import numpy as np
 import pandas as pd
 from prettytable import PrettyTable
@@ -15,10 +16,32 @@ from matplotlib import pyplot as plt
 import os
 from pathlib import WindowsPath
 import time
+from collections import defaultdict
 
 simplefilter(action="ignore", category=FutureWarning)
 
 NUM_EVENT_PER_POS = 100
+MAP_SET_PADS_TO_TRIANGLE = defaultdict(
+    int,
+    {
+        frozenset([6, 5, 4]): 1,
+        frozenset([4, 5, 3]): 2,
+        frozenset([4, 3, 2]): 3,
+        frozenset([3, 2, 1]): 4,
+        frozenset([6, 8, 5]): 5,
+        frozenset([5, 3, 13]): 6,
+        frozenset([3, 13, 1]): 7,
+        frozenset([8, 5, 10]): 8,
+        frozenset([5, 10, 13]): 9,
+        frozenset([13, 1, 14]): 10,
+        frozenset([8, 9, 10]): 11,
+        frozenset([10, 11, 13]): 12,
+        frozenset([11, 13, 14]): 13,
+        frozenset([9, 10, 11]): 14,
+    },
+)
+max_num_triangle: int = 14
+COL_PADS = np.array([1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14])
 
 
 class DumbClassifier:
@@ -44,6 +67,7 @@ class DumbClassifier:
 def main():
     dev_df, eval_df = get_sampled_data()
     analyse_data(dev_df, "DEVELOPMENT")
+    feature_extraction(dev_df, eval_df)
     # analyse_data(dev_df, "EVALUATION")
     regression(dev_df, eval_df)
 
@@ -173,6 +197,61 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
     print()
 
 
+def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
+    col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
+
+    cols = ["x", "y"] + col_pads_pmax
+    sorted_index = (-1 * (dev_df[col_pads_pmax].values)).argsort(axis=1)
+    # only the first 3 are relevant
+    sorted_index = sorted_index[:, :3]
+    sorted_index_pd = pd.DataFrame(sorted_index)
+
+    def combine_indexes(row: pd.Series):
+        global max_num_triangle
+        key = frozenset(COL_PADS[row.values])
+        if key not in MAP_SET_PADS_TO_TRIANGLE:
+            MAP_SET_PADS_TO_TRIANGLE[key] = max_num_triangle + 1
+            max_num_triangle = max_num_triangle + 1
+
+        return MAP_SET_PADS_TO_TRIANGLE[key]
+
+    dev_df["triangle"] = sorted_index_pd.apply(combine_indexes, axis=1)
+    sns.scatterplot(dev_df, x="x", y="y", hue="triangle", palette="Set1", alpha=0.1)
+    # plt.show()
+    sns.scatterplot(
+        dev_df[["triangle", "x", "y"]]
+        .groupby(
+            "triangle",
+            axis=0,
+        )
+        .mean(),
+        x="x",
+        y="y",
+        hue="triangle",
+        palette="Set1",
+    )
+    # plt.show()
+    triangle_to_xy = (
+        dev_df[["triangle", "x", "y"]]
+        .groupby(
+            "triangle",
+            axis=0,
+        )
+        .mean()
+    )
+
+    def get_x_triangle(row: pd.Series):
+        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
+
+    def get_y_triangle(row: pd.Series):
+        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
+
+    dev_df["x_triag"] = dev_df.apply(get_x_triangle, axis=1)
+    dev_df["y_triag"] = dev_df.apply(get_y_triangle, axis=1)
+    print(dev_df.head())
+    print(sorted_index)
+
+
 def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
     X_train, X_val, y_train, y_val = train_test_split(
         dev.drop(["x", "y"], axis=1), dev[["x", "y"]], train_size=0.8, shuffle=True
@@ -183,41 +262,42 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
     regressors = [
         DumbClassifier(),
         RandomForestRegressor(random_state=42, max_features="sqrt"),
-        # LinearRegression(),
+        LinearRegression(),
+        GridSearchCV(
+            DecisionTreeRegressor(),
+            {"splitter": ["best", "random"]},
+        ),
         # GridSearchCV(
-        #     DecisionTreeRegressor(),
-        #     {"splitter": ["best", "random"]},
+        #     RandomForestRegressor(random_state=42),
+        #     {
+        #         "n_estimators": [100, 250, 500],
+        #         "criterion": ["squared_error", "absolute_error"],
+        #         "max_features": [1.0, "sqrt", "log2"],
+        #         "random_state": [42],
+        #         "max_depth": [6, None],
+        #         "n_jobs": [-1],
+        #     },
+        #     scoring="neg_mean_squared_error",
+        #     n_jobs=-1,
         # ),
-        # # GridSearchCV(
-        # #     RandomForestRegressor(random_state=42),
-        # #     {
-        # #         "n_estimators": [100, 250, 500],
-        # #         "criterion": ["squared_error", "absolute_error"],
-        # #         "max_features": [1.0, "sqrt", "log2"],
-        # #         "random_state": [42],
-        # #         "max_depth": [6, None],
-        # #         "n_jobs": [-1],
-        # #     },
-        # #     scoring="neg_mean_squared_error",
-        # #     n_jobs=-1,
-        # # ),
-        # make_pipeline(StandardScaler(), Ridge(random_state=42)),
-        # Lasso(random_state=42),
-        # Ridge(random_state=42),
-        # GridSearchCV(
-        #     Ridge(random_state=42),
-        #     {"positive": [True, False], "solver": ["auto", "svd", "cholesky"]},
-        # ),
+        make_pipeline(StandardScaler(), Ridge(random_state=42)),
+        Lasso(random_state=42),
+        Ridge(random_state=42),
+        GridSearchCV(
+            Ridge(random_state=42),
+            {"positive": [True, False], "solver": ["auto", "svd", "cholesky"]},
+        ),
     ]
     names = [
         "Dumb classifier",
         "Random forest",
-        # "Linear regression",
-        # "Decision Tree Regressor",
-        # "Scaler + Ridge",
-        # "Lasso",
-        # "Ridge",
-        # "GridSearchCV on Ridge",
+        "Linear regression",
+        "Decision Tree Regressor",
+        # "",
+        "Scaler + Ridge",
+        "Lasso",
+        "Ridge",
+        "GridSearchCV on Ridge",
     ]
 
     for name_m, regr in zip(names, regressors):
@@ -253,6 +333,7 @@ def analyse_feature_importante(
     # TODO: Check the function
     importances = forest.feature_importances_
     std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
+    plt.clf()
     sns.barplot(y=features_names, x=importances)
     plt.show()
     print("Features names:")
