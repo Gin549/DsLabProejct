@@ -1,3 +1,4 @@
+from re import DEBUG
 from turtle import color
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.multioutput import MultiOutputRegressor
 from warnings import simplefilter
 import seaborn as sns
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 import os
 from pathlib import WindowsPath
@@ -20,6 +22,7 @@ from collections import defaultdict
 
 simplefilter(action="ignore", category=FutureWarning)
 
+DEBUGGING: bool = False
 NUM_EVENT_PER_POS = 100
 MAP_SET_PADS_TO_TRIANGLE = defaultdict(
     int,
@@ -42,6 +45,13 @@ MAP_SET_PADS_TO_TRIANGLE = defaultdict(
 )
 max_num_triangle: int = 14
 COL_PADS = np.array([1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14])
+UNIT_OF_MEASURE_COL = {
+    "pmax": "mV",
+    "negpmax": "mV",
+    "tmax": "ns",
+    "area": "mV $\\cdot$ ns",
+    "rms": "mV",
+}
 
 
 class DumbClassifier:
@@ -65,24 +75,25 @@ class DumbClassifier:
 
 
 def main():
-    dev_df, eval_df = get_sampled_data()
+    dev_df, eval_df = get_sampled_data(ration_keep=1, force_reload=True)
     analyse_data(dev_df, "DEVELOPMENT")
     feature_extraction(dev_df, eval_df)
     # analyse_data(dev_df, "EVALUATION")
     regression(dev_df, eval_df)
 
 
-def get_sampled_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+def get_sampled_data(
+    ration_keep: float = 0.1, force_reload: bool = False
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     path = WindowsPath(f"{os.curdir}\\data\\development_sampled.csv")
-    if path.exists():
+    if path.exists() and force_reload is False:
         dev_df = pd.read_csv(
             "./data/development_sampled.csv", header=0, index_col=False
         )
     else:
         dev_df = pd.read_csv("./data/development.csv", header=0, index_col=False)
         dev_df.sort_values(["x", "y"], ascending=[True, True], inplace=True)
-        dev_df = sample_dataframe(dev_df, 0.1)
-        print(dev_df.index)
+        dev_df = sample_dataframe(dev_df, ration_keep)
         dev_df.to_csv("./data/development_sampled.csv", index=False)
 
     eval_df = pd.read_csv("./data/evaluation.csv", header=0, index_col=False)
@@ -96,7 +107,7 @@ def sample_dataframe(data: pd.DataFrame, ratio_keep: float) -> pd.DataFrame:
         raise ValueError(
             f"int(1/ratio_keep) has to be a submultiple of a {NUM_EVENT_PER_POS}"
         )
-    return data.iloc[::step, :]
+    return data.iloc[::step, :].reset_index()
 
 
 def analyse_data(data: pd.DataFrame, df_name: str) -> None:
@@ -125,8 +136,69 @@ def check_num_event_per_cell(data: pd.DataFrame) -> None:
     data_heatmap_np = data_heatmap.values
     print("Distinct num of occurances per (x, y):")
     print(np.unique(data_heatmap_np))
-    # sns.heatmap(data_heatmap)
-    # plt.show()
+    fig, ax = plt.subplots(1, 1)
+    plot = sns.heatmap(
+        data_heatmap,
+        ax=ax,
+        square=True,
+        cbar_kws={"location": "right"},
+    )
+    personalize_heatmap(
+        ax,
+        fig,
+        data_heatmap,
+        title="Number of events per cell",
+        title_colorbar="Number of events per cell",
+        xlabel="X",
+        ylabel="Y",
+    )
+
+    fig.savefig(".\\heatmap_num_ev_per_cell.pdf")
+    plt.clf()
+    plt.close()
+
+
+def personalize_heatmap(
+    ax,
+    fig,
+    data_heatmap: pd.DataFrame,
+    title: str,
+    title_colorbar: str,
+    xlabel: str,
+    ylabel: str,
+) -> None:
+    fig.set_size_inches(16, 13)
+
+    color_bar = ax.collections[0].colorbar
+    color_bar.ax.set_title(title_colorbar, fontsize=15)
+    color_bar.ax.tick_params(axis="both", which="major", labelsize=13)
+    color_bar.ax.tick_params(axis="both", which="minor", labelsize=13)
+    ax.set_title(
+        title,
+        fontdict={
+            "fontsize": 24,
+            "horizontalalignment": "center",
+        },
+    )
+
+    ax.set_xlabel(xlabel, fontsize=18, labelpad=8.0)
+    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=20.0)
+    col_labels = [int(col) for col in data_heatmap.columns]
+    row_labels = [int(col) for col in data_heatmap.index]
+    step = 10
+    ax.set_xticks(
+        np.arange(start=0.5, stop=data_heatmap.index.size, step=step),
+        labels=col_labels[::step],
+        fontsize=15,
+    )
+    ax.set_yticks(
+        np.arange(start=0.5, stop=data_heatmap.index.size, step=step),
+        labels=row_labels[::step],
+        fontsize=15,
+    )
+    ax.tick_params(axis="x", labelrotation=0)
+
+    plt.tight_layout()
 
 
 def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
@@ -150,11 +222,26 @@ def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> Non
             .pivot(index="y", columns="x", values=name_col)
             .sort_index(ascending=False)
         )
-        plot = sns.heatmap(data_heatmap)
-        fig = plot.get_figure()
+        fig, ax = plt.subplots(1, 1)
+        plot = sns.heatmap(
+            data_heatmap,
+            ax=ax,
+            square=True,
+            cbar_kws={"location": "right"},
+        )
+        personalize_heatmap(
+            ax,
+            fig,
+            data_heatmap,
+            title=f"Mean {prefix}[{i}] per (x, y)",
+            title_colorbar=f"{prefix}[{i}] mean [{UNIT_OF_MEASURE_COL[prefix]}]",
+            xlabel="X",
+            ylabel="Y",
+        )
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.png")
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.pdf")
         plt.clf()
+        plt.close()
         print(f"\rState: {i+1}/18", end="")
     print()
 
@@ -216,8 +303,20 @@ def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
         return MAP_SET_PADS_TO_TRIANGLE[key]
 
     dev_df["triangle"] = sorted_index_pd.apply(combine_indexes, axis=1)
-    sns.scatterplot(dev_df, x="x", y="y", hue="triangle", palette="Set1", alpha=0.1)
-    # plt.show()
+    if DEBUGGING:
+        print((dev_df["triangle"] == pd.NA).sum())
+        print(dev_df["triangle"])
+        print(dev_df[col_pads_pmax].head())
+        print(dev_df.tail(20))
+        print(dev_df.shape)
+        print(sorted_index.shape)
+        print(dev_df["triangle"].unique())
+    fig, ax = plt.subplots(1, 1)
+    sns.scatterplot(
+        dev_df, x="x", y="y", hue="triangle", palette="Set1", alpha=0.1, ax=ax
+    )
+    plt.show()
+    fig, ax = plt.subplots(1, 1)
     sns.scatterplot(
         dev_df[["triangle", "x", "y"]]
         .groupby(
@@ -229,8 +328,9 @@ def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
         y="y",
         hue="triangle",
         palette="Set1",
+        ax=ax,
     )
-    # plt.show()
+    plt.show()
     triangle_to_xy = (
         dev_df[["triangle", "x", "y"]]
         .groupby(
@@ -239,6 +339,7 @@ def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
         )
         .mean()
     )
+    print(dev_df["triangle"])
 
     def get_x_triangle(row: pd.Series):
         return triangle_to_xy.loc[int(row["triangle"]), :]["x"]

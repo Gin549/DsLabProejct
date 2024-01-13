@@ -3,6 +3,8 @@ data/development.csv
 data/evaluation.csv
 data/sample_submission.csv
 data/development_sampled.csv
+scripts/jupyter_tests/development.csv
+scripts/jupyter_tests/development_sampled.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
