@@ -79,7 +79,7 @@ def main():
     dev_df, eval_df = get_sampled_data(ration_keep=0.1, force_reload=False)
     analyse_data(dev_df, "DEVELOPMENT")
     dev_df = feature_selection(dev_df)
-    feature_extraction(dev_df, eval_df)
+    feature_extraction(dev_df)
     # TODO: save data on file and reload directly from it
     # analyse_data(dev_df, "EVALUATION")
     regression(dev_df, eval_df)
@@ -285,7 +285,7 @@ def feature_selection(data: pd.DataFrame, is_dev: bool = True) -> pd.DataFrame:
     return data[cols]
 
 
-def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
+def feature_extraction_old(dev_df: pd.DataFrame) -> None:
     col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
 
     cols = ["x", "y"] + col_pads_pmax
@@ -340,7 +340,27 @@ def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
         )
         .mean()
     )
-    print(dev_df["triangle"])
+    print("Percentage not starting triangles:")
+    print((dev_df["triangle"] > 14).sum() / dev_df["triangle"].size * 100)
+    print(sorted_index)
+
+    sorted_values = -1 * (np.sort(-1 * (dev_df[col_pads_pmax].values), axis=1))
+    sorted_values = sorted_values[:, :3]
+    print(np.mean(sorted_values, axis=1))
+    print(sorted_values)
+    sns.histplot(
+        x=np.mean(sorted_values, axis=1)[dev_df["triangle"] > 14],
+        kde=True,
+        stat="density",
+        color=sns.color_palette()[0],
+    )
+    sns.histplot(
+        x=np.mean(sorted_values, axis=1)[dev_df["triangle"] <= 14],
+        kde=True,
+        stat="density",
+        color=sns.color_palette()[0],
+    )
+    plt.show()
 
     def get_x_triangle(row: pd.Series):
         return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
@@ -352,6 +372,93 @@ def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
     dev_df["y_triag"] = dev_df.apply(get_y_triangle, axis=1)
     print(dev_df.head())
     print(sorted_index)
+
+
+def feature_extraction(dev_df: pd.DataFrame) -> None:
+    col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
+
+    cols = ["x", "y"] + col_pads_pmax
+
+    def define_triangle(row: pd.Series):
+        max_val = 0
+        key_max = frozenset([6, 5, 4])
+        for key in MAP_SET_PADS_TO_TRIANGLE:
+            cols_to_select = [f"pmax[{pas}]" for pas in key]
+            val = row[cols_to_select].mean()
+            if val > max_val:
+                max_val = val
+                key_max = key
+
+        return MAP_SET_PADS_TO_TRIANGLE[key_max]
+
+    dev_df["triangle"] = dev_df[cols].apply(define_triangle, axis=1)
+
+    triangle_to_xy = (
+        dev_df[["triangle", "x", "y"]]
+        .groupby(
+            "triangle",
+            axis=0,
+        )
+        .mean()
+    )
+    if DEBUG:
+        print((dev_df["triangle"] == pd.NA).sum())
+        print(dev_df["triangle"])
+        print(dev_df[col_pads_pmax].head())
+        print(dev_df.tail(20))
+        print(dev_df.shape)
+        print(dev_df["triangle"].unique())
+        fig, ax = plt.subplots(1, 1)
+        sns.scatterplot(
+            dev_df, x="x", y="y", hue="triangle", palette="Set1", alpha=0.1, ax=ax
+        )
+        plt.show()
+        fig, ax = plt.subplots(1, 1)
+        sns.scatterplot(
+            dev_df[["triangle", "x", "y"]]
+            .groupby(
+                "triangle",
+                axis=0,
+            )
+            .mean(),
+            x="x",
+            y="y",
+            hue="triangle",
+            palette="Set1",
+            ax=ax,
+        )
+        plt.show()
+        print("Percentage not starting triangles:")
+        print((dev_df["triangle"] > 14).sum() / dev_df["triangle"].size * 100)
+
+        sorted_values = -1 * (np.sort(-1 * (dev_df[col_pads_pmax].values), axis=1))
+        sorted_values = sorted_values[:, :3]
+        print(np.mean(sorted_values, axis=1))
+        print(sorted_values)
+        sns.histplot(
+            x=np.mean(sorted_values, axis=1)[dev_df["triangle"] > 14],
+            kde=True,
+            stat="density",
+            color=sns.color_palette()[0],
+        )
+        sns.histplot(
+            x=np.mean(sorted_values, axis=1)[dev_df["triangle"] <= 14],
+            kde=True,
+            stat="density",
+            color=sns.color_palette()[0],
+        )
+        plt.show()
+
+    def get_x_triangle(row: pd.Series):
+        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
+
+    def get_y_triangle(row: pd.Series):
+        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
+
+    dev_df["x_triag"] = dev_df.apply(get_x_triangle, axis=1)
+    dev_df["y_triag"] = dev_df.apply(get_y_triangle, axis=1)
+    if DEBUG:
+        print(dev_df.head())
 
 
 def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
