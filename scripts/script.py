@@ -19,6 +19,7 @@ import os
 from pathlib import WindowsPath
 import time
 from collections import defaultdict
+import re
 
 simplefilter(action="ignore", category=FutureWarning)
 
@@ -75,9 +76,11 @@ class DumbClassifier:
 
 
 def main():
-    dev_df, eval_df = get_sampled_data(ration_keep=1, force_reload=True)
+    dev_df, eval_df = get_sampled_data(ration_keep=0.1, force_reload=False)
     analyse_data(dev_df, "DEVELOPMENT")
+    dev_df = feature_selection(dev_df)
     feature_extraction(dev_df, eval_df)
+    # TODO: save data on file and reload directly from it
     # analyse_data(dev_df, "EVALUATION")
     regression(dev_df, eval_df)
 
@@ -107,7 +110,7 @@ def sample_dataframe(data: pd.DataFrame, ratio_keep: float) -> pd.DataFrame:
         raise ValueError(
             f"int(1/ratio_keep) has to be a submultiple of a {NUM_EVENT_PER_POS}"
         )
-    return data.iloc[::step, :].reset_index()
+    return data.iloc[::step, :].reset_index(drop=True)
 
 
 def analyse_data(data: pd.DataFrame, df_name: str) -> None:
@@ -119,8 +122,8 @@ def analyse_data(data: pd.DataFrame, df_name: str) -> None:
 
     type_of_columns = ["negpmax", "pmax", "area", "tmax", "rms"]
     for type_col in type_of_columns:
-        save_heatmaps(data, type_col)
-        save_distributions(data, type_col)
+        save_heatmaps(data, type_col, rewrite=False)
+        save_distributions(data, type_col, rewrite=False)
 
 
 def check_num_event_per_cell(data: pd.DataFrame) -> None:
@@ -156,49 +159,6 @@ def check_num_event_per_cell(data: pd.DataFrame) -> None:
     fig.savefig(".\\heatmap_num_ev_per_cell.pdf")
     plt.clf()
     plt.close()
-
-
-def personalize_heatmap(
-    ax,
-    fig,
-    data_heatmap: pd.DataFrame,
-    title: str,
-    title_colorbar: str,
-    xlabel: str,
-    ylabel: str,
-) -> None:
-    fig.set_size_inches(16, 13)
-
-    color_bar = ax.collections[0].colorbar
-    color_bar.ax.set_title(title_colorbar, fontsize=15)
-    color_bar.ax.tick_params(axis="both", which="major", labelsize=13)
-    color_bar.ax.tick_params(axis="both", which="minor", labelsize=13)
-    ax.set_title(
-        title,
-        fontdict={
-            "fontsize": 24,
-            "horizontalalignment": "center",
-        },
-    )
-
-    ax.set_xlabel(xlabel, fontsize=18, labelpad=8.0)
-    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=20.0)
-    col_labels = [int(col) for col in data_heatmap.columns]
-    row_labels = [int(col) for col in data_heatmap.index]
-    step = 10
-    ax.set_xticks(
-        np.arange(start=0.5, stop=data_heatmap.index.size, step=step),
-        labels=col_labels[::step],
-        fontsize=15,
-    )
-    ax.set_yticks(
-        np.arange(start=0.5, stop=data_heatmap.index.size, step=step),
-        labels=row_labels[::step],
-        fontsize=15,
-    )
-    ax.tick_params(axis="x", labelrotation=0)
-
-    plt.tight_layout()
 
 
 def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
@@ -259,10 +219,27 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
     print(f"\rState: {0}%", end="")
     name_cols: list[str] = []
     for i in range(18):
-        if prefix == "negpmax":
-            break
-        plot = sns.histplot(data, x=f"{prefix}[{i}]", kde=True, stat="density")
         name_cols.append(f"{prefix}[{i}]")
+        if prefix == "negpmax":
+            continue
+
+        plt.clf()
+        fig, ax = plt.subplots(1, 1)
+        plot = sns.histplot(
+            data,
+            x=f"{prefix}[{i}]",
+            kde=True,
+            stat="density",
+            color=sns.color_palette()[0],
+        )
+        personalize_histplot(
+            ax,
+            fig,
+            data,
+            f"Distribution {prefix}[{i}]",
+            f"{prefix}[{i}] [{UNIT_OF_MEASURE_COL[prefix]}]",
+            "Density",
+        )
         fig = plot.get_figure()
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_distr.png")
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_distr.pdf")
@@ -275,13 +252,37 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
         value_name="values",
         value_vars=name_cols,
     )
+    plt.clf()
+    fig, ax = plt.subplots(1, 1)
     plot = sns.boxplot(dfm, y=f"{prefix}", x="values", color=sns.color_palette()[0])
+    personalize_boxplot(
+        ax,
+        fig,
+        dfm,
+        f"{prefix.capitalize()} distributions",
+        "Distribution",
+        "Feature",
+        13,
+        9,
+    )
     fig = plot.get_figure()
     fig.savefig(f"{path.absolute()}\\{prefix}_boxplot.png")
     fig.savefig(f"{path.absolute()}\\{prefix}_boxplot.pdf")
     plot.clear()
 
     print()
+
+
+def feature_selection(data: pd.DataFrame, is_dev: bool = True) -> pd.DataFrame:
+    cols = []
+    if is_dev:
+        cols += ["x", "y"]
+    pads_to_keep = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14]
+    # TODO: check if keeping tmax the results improve
+    type_of_columns = ["negpmax", "pmax", "area"]
+    cols += [f"{type}[{i}]" for i in pads_to_keep for type in type_of_columns]
+    cols += ["pmax[15]"]
+    return data[cols]
 
 
 def feature_extraction(dev_df: pd.DataFrame, eval_df: pd.DataFrame) -> None:
@@ -363,31 +364,31 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
     regressors = [
         DumbClassifier(),
         RandomForestRegressor(random_state=42, max_features="sqrt"),
-        LinearRegression(),
-        GridSearchCV(
-            DecisionTreeRegressor(),
-            {"splitter": ["best", "random"]},
-        ),
+        # LinearRegression(),
         # GridSearchCV(
-        #     RandomForestRegressor(random_state=42),
-        #     {
-        #         "n_estimators": [100, 250, 500],
-        #         "criterion": ["squared_error", "absolute_error"],
-        #         "max_features": [1.0, "sqrt", "log2"],
-        #         "random_state": [42],
-        #         "max_depth": [6, None],
-        #         "n_jobs": [-1],
-        #     },
-        #     scoring="neg_mean_squared_error",
-        #     n_jobs=-1,
+        #     DecisionTreeRegressor(),
+        #     {"splitter": ["best", "random"]},
         # ),
-        make_pipeline(StandardScaler(), Ridge(random_state=42)),
-        Lasso(random_state=42),
-        Ridge(random_state=42),
-        GridSearchCV(
-            Ridge(random_state=42),
-            {"positive": [True, False], "solver": ["auto", "svd", "cholesky"]},
-        ),
+        # # GridSearchCV(
+        # #     RandomForestRegressor(random_state=42),
+        # #     {
+        # #         "n_estimators": [100, 250, 500],
+        # #         "criterion": ["squared_error", "absolute_error"],
+        # #         "max_features": [1.0, "sqrt", "log2"],
+        # #         "random_state": [42],
+        # #         "max_depth": [6, None],
+        # #         "n_jobs": [-1],
+        # #     },
+        # #     scoring="neg_mean_squared_error",
+        # #     n_jobs=-1,
+        # # ),
+        # make_pipeline(StandardScaler(), Ridge(random_state=42)),
+        # Lasso(random_state=42),
+        # Ridge(random_state=42),
+        # GridSearchCV(
+        #     Ridge(random_state=42),
+        #     {"positive": [True, False], "solver": ["auto", "svd", "cholesky"]},
+        # ),
     ]
     names = [
         "Dumb classifier",
@@ -416,7 +417,9 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
     print(table)
 
     index_random_forest = names.index("Random forest")
-    analyse_feature_importante(regressors[index_random_forest], list(dev.columns)[2:])
+    analyse_feature_importante(
+        regressors[index_random_forest], list(dev.drop(["x", "y"], axis=1).columns)
+    )
     # regr = regressors[index_model_choosen]
     # print(regr.best_params_)
 
@@ -431,18 +434,220 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
 def analyse_feature_importante(
     forest: RandomForestRegressor, features_names: list[str]
 ):
-    # TODO: Check the function
     importances = forest.feature_importances_
     std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
+
+    feature_import_df = pd.DataFrame(
+        {
+            "feature": features_names,
+            "importance": importances,
+        }
+    )
+    feature_import_df = feature_import_df.sort_values("importance", ascending=False)
+    print(feature_import_df)
+
+    # groupying by type of feature
+    feature_cat_import_df = pd.DataFrame(
+        {
+            "feature": [re.sub(r"\[\d+\]", "", feat) for feat in features_names],
+            "importance": importances,
+        }
+    )
+    feature_cat_import_df = (
+        feature_cat_import_df.groupby("feature", as_index=False)
+        .sum()
+        .sort_values("importance", ascending=False)
+    )
+    print(feature_cat_import_df)
+    feature_import_df["std"] = std
     plt.clf()
-    sns.barplot(y=features_names, x=importances)
+    fig, ax = plt.subplots(1, 1)
+    plt.grid()
+    plot = sns.barplot(
+        feature_cat_import_df,
+        y="feature",
+        x="importance",
+        color=sns.color_palette()[0],
+        ax=ax,
+    )
+    personalize_barplot(
+        ax,
+        fig,
+        feature_cat_import_df,
+        "Feature importance by category",
+        "Importance",
+        "Feature category",
+    )
     plt.show()
-    print("Features names:")
-    print(features_names)
-    print("Feature Importance:")
-    print(importances)
-    print("Feature importance Variance:")
-    print(std)
+    plt.clf()
+    fig, ax = plt.subplots(1, 1)
+    plt.grid()
+    plot = sns.barplot(
+        feature_import_df,
+        y="feature",
+        x="importance",
+        color=sns.color_palette()[0],
+        ax=ax,
+    )
+    personalize_barplot(
+        ax,
+        fig,
+        feature_import_df,
+        "Feature importance",
+        "Importance",
+        "Feature",
+        12,
+        18,
+    )
+    plt.show()
+    plt.clf()
+
+
+def personalize_heatmap(
+    ax,
+    fig,
+    data_heatmap: pd.DataFrame,
+    title: str,
+    title_colorbar: str,
+    xlabel: str,
+    ylabel: str,
+) -> None:
+    fig.set_size_inches(10, 8)
+
+    color_bar = ax.collections[0].colorbar
+    color_bar.ax.set_title(title_colorbar, fontsize=15)
+    color_bar.ax.tick_params(axis="both", which="major", labelsize=13)
+    color_bar.ax.tick_params(axis="both", which="minor", labelsize=13)
+    ax.set_title(
+        title,
+        fontdict={
+            "fontsize": 24,
+            "horizontalalignment": "center",
+        },
+        pad=20,
+    )
+
+    ax.set_xlabel(xlabel, fontsize=18, labelpad=8.0)
+    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=20.0)
+    col_labels = [int(col) for col in data_heatmap.columns]
+    row_labels = [int(col) for col in data_heatmap.index]
+    step = 10
+    ax.set_xticks(
+        np.arange(start=0.5, stop=data_heatmap.index.size, step=step),
+        labels=col_labels[::step],
+        fontsize=15,
+    )
+    ax.set_yticks(
+        np.arange(start=0.5, stop=data_heatmap.index.size, step=step),
+        labels=row_labels[::step],
+        fontsize=15,
+    )
+    ax.tick_params(axis="x", labelrotation=0)
+
+    plt.tight_layout()
+
+
+def personalize_histplot(
+    ax,
+    fig,
+    data_heatmap: pd.DataFrame,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    width_inches: int = 12,
+    height_inches: int = 8,
+) -> None:
+    fig.set_size_inches(width_inches, height_inches)
+
+    ax.set_title(
+        title,
+        fontdict={
+            "fontsize": 24,
+            "horizontalalignment": "center",
+        },
+        pad=20,
+    )
+
+    ax.set_xlabel(xlabel, fontsize=18, labelpad=8.0, position="right")
+    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=70.0, position="top")
+    ax.tick_params(
+        axis="x",
+        labelsize=15,
+    )
+    ax.tick_params(
+        axis="y",
+        labelsize=15,
+    )
+    ax.lines[0].set_color(sns.color_palette()[1])
+    plt.tight_layout()
+
+
+def personalize_boxplot(
+    ax,
+    fig,
+    data_heatmap: pd.DataFrame,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    width_inches: int = 12,
+    height_inches: int = 8,
+) -> None:
+    fig.set_size_inches(width_inches, height_inches)
+
+    ax.set_title(
+        title,
+        fontdict={
+            "fontsize": 24,
+            "horizontalalignment": "center",
+        },
+        pad=20,
+    )
+
+    ax.set_xlabel(xlabel, fontsize=18, labelpad=8.0, position="right")
+    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=70.0, position="top")
+    ax.tick_params(
+        axis="x",
+        labelsize=15,
+    )
+    ax.tick_params(
+        axis="y",
+        labelsize=15,
+    )
+    plt.tight_layout()
+
+
+def personalize_barplot(
+    ax,
+    fig,
+    data_heatmap: pd.DataFrame,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    width_inches: int = 12,
+    height_inches: int = 8,
+) -> None:
+    fig.set_size_inches(width_inches, height_inches)
+
+    ax.set_title(
+        title,
+        fontdict={
+            "fontsize": 24,
+            "horizontalalignment": "center",
+        },
+        pad=20,
+    )
+
+    ax.set_xlabel(xlabel, fontsize=18, labelpad=8.0, position="right")
+    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=70.0, position="top")
+    ax.tick_params(
+        axis="x",
+        labelsize=15,
+    )
+    ax.tick_params(
+        axis="y",
+        labelsize=15,
+    )
+    plt.tight_layout()
 
 
 main()
