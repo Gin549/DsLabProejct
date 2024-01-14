@@ -45,7 +45,7 @@ MAP_SET_PADS_TO_TRIANGLE = defaultdict(
     },
 )
 max_num_triangle: int = 14
-COL_PADS = np.array([1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14])
+COL_PADS = np.array([1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14], dtype=np.int16)
 UNIT_OF_MEASURE_COL = {
     "pmax": "mV",
     "negpmax": "mV",
@@ -76,17 +76,47 @@ class DumbClassifier:
 
 
 def main():
-    dev_df, eval_df = get_sampled_data(ration_keep=0.1, force_reload=False)
-    analyse_data(dev_df, "DEVELOPMENT")
-    dev_df = feature_selection(dev_df)
-    feature_extraction(dev_df)
-    # TODO: save data on file and reload directly from it
+    ratio_keep = 0.2
+    # force to reload of the datasets and the processing
+    force_reload = False
+
+    path: str
+    if ratio_keep < 1.0:
+        path = "./data/development_sampled_processed.csv"
+    else:
+        path = "./data/development_processed.csv"
+
+    w_path = WindowsPath(path)
+    if force_reload is True or w_path.exists() is False:
+        #
+        dev_df, eval_df = get_sampled_data(
+            ratio_keep=ratio_keep, force_reload=force_reload
+        )
+        analyse_data(dev_df, "DEVELOPMENT")
+        dev_df = feature_selection(dev_df)
+        eval_df = feature_selection(eval_df, is_dev=False)
+        triangle_to_xy: dict[int, list[float]] = generate_triangles_position_and_apply(
+            dev_df
+        )
+        print(triangle_to_xy.keys)
+        feature_extraction(eval_df, triangle_to_xy)
+        dev_df.to_csv(path, index=False)
+        eval_df.to_csv("./data/evaluation_processed.csv", index=False)
+    else:
+        # load already processed data
+        dev_df = pd.read_csv(path, header=0, index_col=False)
+        eval_df = pd.read_csv(
+            "./data/evaluation_processed.csv", header=0, index_col=False
+        )
+
+    # TODO: think about filtering negpmax
+
     # analyse_data(dev_df, "EVALUATION")
     regression(dev_df, eval_df)
 
 
 def get_sampled_data(
-    ration_keep: float = 0.1, force_reload: bool = False
+    ratio_keep: float = 0.1, force_reload: bool = False
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     path = WindowsPath(f"{os.curdir}\\data\\development_sampled.csv")
     if path.exists() and force_reload is False:
@@ -96,7 +126,7 @@ def get_sampled_data(
     else:
         dev_df = pd.read_csv("./data/development.csv", header=0, index_col=False)
         dev_df.sort_values(["x", "y"], ascending=[True, True], inplace=True)
-        dev_df = sample_dataframe(dev_df, ration_keep)
+        dev_df = sample_dataframe(dev_df, ratio_keep)
         dev_df.to_csv("./data/development_sampled.csv", index=False)
 
     eval_df = pd.read_csv("./data/evaluation.csv", header=0, index_col=False)
@@ -285,6 +315,73 @@ def feature_selection(data: pd.DataFrame, is_dev: bool = True) -> pd.DataFrame:
     return data[cols]
 
 
+def generate_triangles_position_and_apply(
+    dev_df: pd.DataFrame,
+) -> dict[int, list[float]]:
+    col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
+
+    cols = ["x", "y"] + col_pads_pmax
+
+    dev_df["triangle"] = dev_df[cols].apply(define_triangle, axis=1)
+
+    triangle_to_xy = (
+        dev_df[["triangle", "x", "y"]]
+        .groupby(
+            "triangle",
+            axis=0,
+        )
+        .mean()
+    )
+
+    triangle_to_xy_dict = {
+        triangle: [
+            triangle_to_xy.loc[triangle, :]["x"],
+            triangle_to_xy.loc[triangle, :]["y"],
+        ]
+        for triangle in list(triangle_to_xy.index)
+    }
+
+    dev_df["x_triag"] = dev_df.apply(
+        lambda x: get_x_triangle(x, triangle_to_xy_dict), axis=1
+    )
+    dev_df["y_triag"] = dev_df.apply(
+        lambda x: get_y_triangle(x, triangle_to_xy_dict), axis=1
+    )
+    return triangle_to_xy_dict
+
+
+def feature_extraction(
+    data: pd.DataFrame, triangle_to_xy: dict[int, list[float]]
+) -> None:
+    cols = [f"pmax[{pad}]" for pad in COL_PADS]
+    data["triangle"] = data[cols].apply(define_triangle, axis=1)
+    print("Unique triangles eval:")
+    print(np.unique(data["triangle"]))
+    data["x_triag"] = data.apply(lambda x: get_x_triangle(x, triangle_to_xy), axis=1)
+    data["y_triag"] = data.apply(lambda x: get_y_triangle(x, triangle_to_xy), axis=1)
+
+
+def define_triangle(row: pd.Series):
+    max_val = 0
+    key_max = frozenset([6, 5, 4])
+    for key in MAP_SET_PADS_TO_TRIANGLE:
+        cols_to_select = [f"pmax[{pas}]" for pas in key]
+        val = row[cols_to_select].mean()
+        if val > max_val:
+            max_val = val
+            key_max = key
+
+    return MAP_SET_PADS_TO_TRIANGLE[key_max]
+
+
+def get_x_triangle(row: pd.Series, triangle_to_xy_dict: dict[int, list[float]]):
+    return triangle_to_xy_dict[int(row["triangle"])][0]
+
+
+def get_y_triangle(row: pd.Series, triangle_to_xy_dict: dict[int, list[float]]):
+    return triangle_to_xy_dict[int(row["triangle"])][1]
+
+
 def feature_extraction_old(dev_df: pd.DataFrame) -> None:
     col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
 
@@ -366,7 +463,7 @@ def feature_extraction_old(dev_df: pd.DataFrame) -> None:
         return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
 
     def get_y_triangle(row: pd.Series):
-        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
+        return triangle_to_xy.loc[int(row["triangle"]), :]["y"]
 
     dev_df["x_triag"] = dev_df.apply(get_x_triangle, axis=1)
     dev_df["y_triag"] = dev_df.apply(get_y_triangle, axis=1)
@@ -374,7 +471,7 @@ def feature_extraction_old(dev_df: pd.DataFrame) -> None:
     print(sorted_index)
 
 
-def feature_extraction(dev_df: pd.DataFrame) -> None:
+def feature_extraction_old_2(dev_df: pd.DataFrame) -> None:
     col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
 
     cols = ["x", "y"] + col_pads_pmax
@@ -453,7 +550,7 @@ def feature_extraction(dev_df: pd.DataFrame) -> None:
         return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
 
     def get_y_triangle(row: pd.Series):
-        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
+        return triangle_to_xy.loc[int(row["triangle"]), :]["y"]
 
     dev_df["x_triag"] = dev_df.apply(get_x_triangle, axis=1)
     dev_df["y_triag"] = dev_df.apply(get_y_triangle, axis=1)
