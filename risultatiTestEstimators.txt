@@ -1,5 +1,14 @@
+Test con sample 0.5 no outliers si pmax
 n_estimators:60 - maxFeatures:sqrt - dist4.510971695460865n_estimators:80 - maxFeatures:sqrt - dist4.458457700831672n_estimators:100 - maxFeatures:sqrt - dist4.427378152693058n_estimators:250 - maxFeatures:sqrt - dist4.345286085319399n_estimators:500 - maxFeatures:sqrt - dist4.32179576799335Test con sample 0.2 dati con outlier e senza pmaxn_estimators:60 - maxFeatures:sqrt - dist5.166147965304178
-n_estimators:80 - maxFeatures:sqrt - dist5.094512207273457
-n_estimators:100 - maxFeatures:sqrt - dist5.049676670880926
-n_estimators:250 - maxFeatures:sqrt - dist4.948343813138496
-n_estimators:500 - maxFeatures:sqrt - dist4.912666146783107
+Test con sample 0.2 outliers e no maxPmax
+n_estimators:60 - maxFeatures:sqrt - dist4.932417112206492
+n_estimators:80 - maxFeatures:sqrt - dist4.8656864644202775
+n_estimators:100 - maxFeatures:sqrt - dist4.828243823921745
+Test con sample 0.2 no outliers no maxPmax
+n_estimators:60 - maxFeatures:sqrt - dist4.920481412297983
+n_estimators:80 - maxFeatures:sqrt - dist4.857025162508344
+n_estimators:100 - maxFeatures:sqrt - dist4.813646851337259
+Test con sample 0.2 no outliers si maxPmax
+n_estimators:60 - maxFeatures:sqrt - dist4.910528016244344
+n_estimators:80 - maxFeatures:sqrt - dist4.850593365120134
+n_estimators:100 - maxFeatures:sqrt - dist4.809362402834275
