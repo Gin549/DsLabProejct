@@ -1,0 +1,5 @@
+n_estimators:60 - maxFeatures:sqrt - dist4.510971695460865n_estimators:80 - maxFeatures:sqrt - dist4.458457700831672n_estimators:100 - maxFeatures:sqrt - dist4.427378152693058n_estimators:250 - maxFeatures:sqrt - dist4.345286085319399n_estimators:500 - maxFeatures:sqrt - dist4.32179576799335Test con sample 0.2 dati con outlier e senza pmaxn_estimators:60 - maxFeatures:sqrt - dist5.166147965304178
+n_estimators:80 - maxFeatures:sqrt - dist5.094512207273457
+n_estimators:100 - maxFeatures:sqrt - dist5.049676670880926
+n_estimators:250 - maxFeatures:sqrt - dist4.948343813138496
+n_estimators:500 - maxFeatures:sqrt - dist4.912666146783107
