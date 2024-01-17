@@ -20,6 +20,7 @@ from pathlib import WindowsPath
 import time
 from collections import defaultdict
 import re
+from collections import Counter
 
 simplefilter(action="ignore", category=FutureWarning)
 
@@ -92,14 +93,14 @@ def main():
         dev_df, eval_df = get_sampled_data(
             ratio_keep=ratio_keep, force_reload=force_reload
         )
-        analyse_data(dev_df, "DEVELOPMENT")
+        #analyse_data(dev_df, "DEVELOPMENT")
         dev_df = feature_selection(dev_df)
         eval_df = feature_selection(eval_df, is_dev=False)
-        triangle_to_xy: dict[int, list[float]] = generate_triangles_position_and_apply(
+        """triangle_to_xy: dict[int, list[float]] = generate_triangles_position_and_apply(
             dev_df
         )
         print(triangle_to_xy.keys)
-        feature_extraction(eval_df, triangle_to_xy)
+        feature_extraction(eval_df, triangle_to_xy)"""
         dev_df.to_csv(path, index=False)
         eval_df.to_csv("./data/evaluation_processed.csv", index=False)
     else:
@@ -119,14 +120,17 @@ def get_sampled_data(
     ratio_keep: float = 0.1, force_reload: bool = False
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     path = WindowsPath(f"{os.curdir}\\data\\development_sampled.csv")
+
     if path.exists() and force_reload is False:
         dev_df = pd.read_csv(
             "./data/development_sampled.csv", header=0, index_col=False
         )
     else:
-        dev_df = pd.read_csv("./data/development.csv", header=0, index_col=False)
+        dev_df = pd.read_csv("./data/development_triangle.csv", header=0, index_col=False)
         dev_df.sort_values(["x", "y"], ascending=[True, True], inplace=True)
         dev_df = sample_dataframe(dev_df, ratio_keep)
+        dev_df.insert(2,"indiciPerOut",dev_df.index,True)
+        dev_df = addPmax(dev_df)
         dev_df.to_csv("./data/development_sampled.csv", index=False)
 
     eval_df = pd.read_csv("./data/evaluation.csv", header=0, index_col=False)
@@ -140,7 +144,7 @@ def sample_dataframe(data: pd.DataFrame, ratio_keep: float) -> pd.DataFrame:
         raise ValueError(
             f"int(1/ratio_keep) has to be a submultiple of a {NUM_EVENT_PER_POS}"
         )
-    return data.iloc[::step, :].reset_index(drop=True)
+    return data.iloc[::step, :]
 
 
 def analyse_data(data: pd.DataFrame, df_name: str) -> None:
@@ -307,6 +311,10 @@ def feature_selection(data: pd.DataFrame, is_dev: bool = True) -> pd.DataFrame:
     cols = []
     if is_dev:
         cols += ["x", "y"]
+        cols+=["triangle"]
+        cols+=["x_triag"]
+        cols+=["y_triag"]
+        cols +=["indiciPerOut"]
     pads_to_keep = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14]
     # TODO: check if keeping tmax the results improve
     type_of_columns = ["negpmax", "pmax", "area"]
@@ -559,9 +567,28 @@ def feature_extraction_old_2(dev_df: pd.DataFrame) -> None:
 
 
 def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
-    X_train, X_val, y_train, y_val = train_test_split(
+
+
+    #NEW SPLIT
+    maskTraining = boolMaskTrSet(dev)
+    maskTest = [not b for b in maskTraining]
+    trainSet = dev.iloc[maskTraining,:]
+    outInd = indOutliers()
+    #trainSet = trainSet[~trainSet["indiciPerOut"].isin(outInd)]
+    y_train = trainSet[["x", "y"]]
+    X_train = trainSet.drop(["x", "y","indiciPerOut"], axis=1)
+    TestSet = dev.iloc[maskTest,:]
+    y_test = TestSet[["x", "y"]]
+    X_test = TestSet.drop(["x", "y","indiciPerOut"], axis=1)
+    print(len(X_test))
+    print(len(X_train))
+    print(dev.columns)
+    randomForestGridSearch(X_train,y_train,X_test,y_test)
+    return
+
+    """X_train, X_val, y_train, y_val = train_test_split(
         dev.drop(["x", "y"], axis=1), dev[["x", "y"]], train_size=0.8, shuffle=True
-    )
+    )"""
 
     table = PrettyTable()
     table.field_names = ["Model", "Average Euclidean distance", "Execution time[s]"]
@@ -706,6 +733,62 @@ def analyse_feature_importante(
     plt.show()
     plt.clf()
 
+
+def boolMaskTrSet(
+            dev_df: pd.DataFrame
+    )->list:
+        testIndex = [True]*dev_df.shape[0]
+        for i in range(int(dev_df.shape[0]/20)):
+            n=0
+            while(n!=10):
+                k = np.random.randint(i*20,i*20+20)
+                if(testIndex[k]  != False):
+                    testIndex[k] = False
+                    n+=1   
+        return testIndex
+
+def indOutliers()->list:
+    with open("./data/indiciOutlierPadAttivi.txt",'r') as fp:
+        ind = [int(index.strip()) for index in fp.readlines()]
+    return ind
+
+def addPmax(df):
+    dim = df.shape
+    colPmax = np.zeros(dim[0],dtype=float)
+    rowPmax = np.zeros((18),dtype=float)
+    names = df.columns
+    z =0
+    for k, row in df.iterrows():
+        for i in range(18):
+            element = f"pmax[{i}]"
+            if(element in names):
+                rowPmax[i] = row[element]
+        colPmax[z] = np.max(rowPmax)
+        z+=1
+    df.insert(2,"maxPmax",colPmax,True)
+    return df
+
+def randomForestGridSearch(X_train,y_train,X_test,y_test):
+    param_grid = {
+    "n_estimators": [60,80,100, 250, 500],
+    "criterion": ["mse"],
+    "max_features": ["sqrt"],
+    }
+    minDist = 10
+    listReg = []
+    with open("risultatiTestEstimators.txt",'a') as fp:
+        fp.write("Test con sample 0.2 dati con outlier e senza pmax")
+        for n_est in param_grid["n_estimators"]:
+            for mf in param_grid["max_features"]:
+                regressorRF = RandomForestRegressor(n_estimators=n_est,max_features=mf,random_state=42,n_jobs=-1)
+                regressorRF.fit(X_train,y_train)
+                y_pred = regressorRF.predict(X_test)
+                med = (
+                np.sqrt(np.sum(np.power(y_test - y_pred, 2), axis=1)).sum() / y_pred.shape[0]
+                )
+                
+                print(f"n_estimators:{n_est} - maxFeatures:{mf} - dist{med}")
+                fp.write(f"n_estimators:{n_est} - maxFeatures:{mf} - dist{med}\n")
 
 def personalize_heatmap(
     ax,
