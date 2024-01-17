@@ -568,20 +568,23 @@ def feature_extraction_old_2(dev_df: pd.DataFrame) -> None:
 
 def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
 
+    dev = addPmax(dev)
 
     #NEW SPLIT
     maskTraining = boolMaskTrSet(dev)
     maskTest = [not b for b in maskTraining]
     trainSet = dev.iloc[maskTraining,:]
+    TestSet = dev.iloc[maskTest,:]
     outInd = indOutliers()
-    #trainSet = trainSet[~trainSet["indiciPerOut"].isin(outInd)]
+    trainSet = trainSet[~trainSet["indiciPerOut"].isin(outInd)]
     y_train = trainSet[["x", "y"]]
     X_train = trainSet.drop(["x", "y","indiciPerOut"], axis=1)
-    TestSet = dev.iloc[maskTest,:]
     y_test = TestSet[["x", "y"]]
     X_test = TestSet.drop(["x", "y","indiciPerOut"], axis=1)
     print(len(X_test))
     print(len(X_train))
+    print(Counter(maskTest))
+    print(Counter(maskTraining))
     print(dev.columns)
     randomForestGridSearch(X_train,y_train,X_test,y_test)
     return
@@ -740,7 +743,7 @@ def boolMaskTrSet(
         testIndex = [True]*dev_df.shape[0]
         for i in range(int(dev_df.shape[0]/20)):
             n=0
-            while(n!=10):
+            while(n!=4):
                 k = np.random.randint(i*20,i*20+20)
                 if(testIndex[k]  != False):
                     testIndex[k] = False
