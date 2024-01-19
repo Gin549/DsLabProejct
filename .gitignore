@@ -10,6 +10,12 @@ scripts/jupyter_tests/development.csv
 scripts/jupyter_tests/development_sampled.csv
 scripts/jupyter_tests/development_triangle.csv
 scripts/jupyter_tests/development_processed.csv
+scripts/jupyter_tests/evaluation_processed.csv
+scripts/jupyter_tests/evaluation.csv
+scripts/jupyter_tests/model_submission.sav
+scripts/jupyter_tests/sample_submission.csv
+scripts/jupyter_tests/submission.csv
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
