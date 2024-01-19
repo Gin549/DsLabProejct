@@ -5,6 +5,7 @@ data/sample_submission.csv
 data/development_sampled.csv
 data/development_sampled_processed.csv
 data/evaluation_processed.csv
+data/data.rar
 scripts/jupyter_tests/development.csv
 scripts/jupyter_tests/development_sampled.csv
 scripts/jupyter_tests/development_triangle.csv
