@@ -15,6 +15,11 @@ scripts/jupyter_tests/evaluation.csv
 scripts/jupyter_tests/model_submission.sav
 scripts/jupyter_tests/sample_submission.csv
 scripts/jupyter_tests/submission.csv
+scripts/jupyter_tests/train_dataset_triangle.csv
+scripts/jupyter_tests/test_dataset_triangle.csv
+scripts/jupyter_tests/eval_procc_triangle_v2.csv
+scripts/jupyter_tests/jupyter_tests.rar
+scripts/jupyter_tests/triangle_to_xy.sav
 
 
 # Byte-compiled / optimized / DLL files
