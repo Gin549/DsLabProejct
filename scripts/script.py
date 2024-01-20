@@ -56,7 +56,7 @@ UNIT_OF_MEASURE_COL = {
 }
 
 
-class DumbClassifier:
+class DumbRegressor:
     def __init__(self) -> None:
         self.min_x: int = 0
         self.max_x: int = 0
@@ -77,9 +77,10 @@ class DumbClassifier:
 
 
 def main():
-    ratio_keep = 0.2
+    ratio_keep = 1.0
     # force to reload of the datasets and the processing
-    force_reload = False
+    force_reload = True
+    exit_after_analysis = True
 
     path: str
     if ratio_keep < 1.0:
@@ -91,9 +92,11 @@ def main():
     if force_reload is True or w_path.exists() is False:
         #
         dev_df, eval_df = get_sampled_data(
-            ratio_keep=ratio_keep, force_reload=force_reload
+            ratio_keep=ratio_keep, force_reload=force_reload, save_to_file=False
         )
-        #analyse_data(dev_df, "DEVELOPMENT")
+        analyse_data(dev_df, "DEVELOPMENT")
+        if exit_after_analysis:
+            return
         dev_df = feature_selection(dev_df)
         eval_df = feature_selection(eval_df, is_dev=False)
         """triangle_to_xy: dict[int, list[float]] = generate_triangles_position_and_apply(
@@ -117,7 +120,7 @@ def main():
 
 
 def get_sampled_data(
-    ratio_keep: float = 0.1, force_reload: bool = False
+    ratio_keep: float = 0.1, force_reload: bool = False, save_to_file: bool = False
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     path = WindowsPath(f"{os.curdir}\\data\\development_sampled.csv")
 
@@ -126,12 +129,13 @@ def get_sampled_data(
             "./data/development_sampled.csv", header=0, index_col=False
         )
     else:
-        dev_df = pd.read_csv("./data/development_triangle.csv", header=0, index_col=False)
+        dev_df = pd.read_csv("./data/development.csv", header=0, index_col=False)
         dev_df.sort_values(["x", "y"], ascending=[True, True], inplace=True)
         dev_df = sample_dataframe(dev_df, ratio_keep)
-        dev_df.insert(2,"indiciPerOut",dev_df.index,True)
+        dev_df.insert(2, "indiciPerOut", dev_df.index, True)
         dev_df = addPmax(dev_df)
-        dev_df.to_csv("./data/development_sampled.csv", index=False)
+        if save_to_file:
+            dev_df.to_csv("./data/development_sampled.csv", index=False)
 
     eval_df = pd.read_csv("./data/evaluation.csv", header=0, index_col=False)
 
@@ -152,15 +156,15 @@ def analyse_data(data: pd.DataFrame, df_name: str) -> None:
     data.info()
     print(data.describe())
 
-    check_num_event_per_cell(data)
+    check_num_event_per_cell(data, rewrite=True)
 
     type_of_columns = ["negpmax", "pmax", "area", "tmax", "rms"]
     for type_col in type_of_columns:
-        save_heatmaps(data, type_col, rewrite=False)
+        save_heatmaps(data, type_col, rewrite=True)
         save_distributions(data, type_col, rewrite=False)
 
 
-def check_num_event_per_cell(data: pd.DataFrame) -> None:
+def check_num_event_per_cell(data: pd.DataFrame, rewrite: bool = False) -> None:
     df_plot = data[["x", "y", "pmax[1]"]]
     data_heatmap = (
         df_plot.groupby(["x", "y"])
@@ -186,13 +190,14 @@ def check_num_event_per_cell(data: pd.DataFrame) -> None:
         data_heatmap,
         title="Number of events per cell",
         title_colorbar="Number of events per cell",
-        xlabel="X",
-        ylabel="Y",
+        xlabel="X [$\\mu m$]",
+        ylabel="Y [$\\mu m$]",
     )
 
-    fig.savefig(".\\heatmap_num_ev_per_cell.pdf")
-    plt.clf()
-    plt.close()
+    if rewrite:
+        fig.savefig(".\\heatmap_num_ev_per_cell.pdf")
+        plt.clf()
+        plt.close()
 
 
 def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> None:
@@ -229,8 +234,8 @@ def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> Non
             data_heatmap,
             title=f"Mean {prefix}[{i}] per (x, y)",
             title_colorbar=f"{prefix}[{i}] mean [{UNIT_OF_MEASURE_COL[prefix]}]",
-            xlabel="X",
-            ylabel="Y",
+            xlabel="X [$\\mu m$]",
+            ylabel="Y [$\\mu m$]",
         )
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.png")
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.pdf")
@@ -311,10 +316,10 @@ def feature_selection(data: pd.DataFrame, is_dev: bool = True) -> pd.DataFrame:
     cols = []
     if is_dev:
         cols += ["x", "y"]
-        cols+=["triangle"]
-        cols+=["x_triag"]
-        cols+=["y_triag"]
-        cols +=["indiciPerOut"]
+        cols += ["triangle"]
+        cols += ["x_triag"]
+        cols += ["y_triag"]
+        cols += ["indiciPerOut"]
     pads_to_keep = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14]
     # TODO: check if keeping tmax the results improve
     type_of_columns = ["negpmax", "pmax", "area"]
@@ -567,26 +572,25 @@ def feature_extraction_old_2(dev_df: pd.DataFrame) -> None:
 
 
 def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
-
     dev = addPmax(dev)
 
-    #NEW SPLIT
+    # NEW SPLIT
     maskTraining = boolMaskTrSet(dev)
     maskTest = [not b for b in maskTraining]
-    trainSet = dev.iloc[maskTraining,:]
-    TestSet = dev.iloc[maskTest,:]
+    trainSet = dev.iloc[maskTraining, :]
+    TestSet = dev.iloc[maskTest, :]
     outInd = indOutliers()
     trainSet = trainSet[~trainSet["indiciPerOut"].isin(outInd)]
     y_train = trainSet[["x", "y"]]
-    X_train = trainSet.drop(["x", "y","indiciPerOut"], axis=1)
+    X_train = trainSet.drop(["x", "y", "indiciPerOut"], axis=1)
     y_test = TestSet[["x", "y"]]
-    X_test = TestSet.drop(["x", "y","indiciPerOut"], axis=1)
+    X_test = TestSet.drop(["x", "y", "indiciPerOut"], axis=1)
     print(len(X_test))
     print(len(X_train))
     print(Counter(maskTest))
     print(Counter(maskTraining))
     print(dev.columns)
-    randomForestGridSearch(X_train,y_train,X_test,y_test)
+    randomForestGridSearch(X_train, y_train, X_test, y_test)
     return
 
     """X_train, X_val, y_train, y_val = train_test_split(
@@ -596,7 +600,7 @@ def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
     table = PrettyTable()
     table.field_names = ["Model", "Average Euclidean distance", "Execution time[s]"]
     regressors = [
-        DumbClassifier(),
+        DumbRegressor(),
         RandomForestRegressor(random_state=42, max_features="sqrt"),
         # LinearRegression(),
         # GridSearchCV(
@@ -737,61 +741,66 @@ def analyse_feature_importante(
     plt.clf()
 
 
-def boolMaskTrSet(
-            dev_df: pd.DataFrame
-    )->list:
-        testIndex = [True]*dev_df.shape[0]
-        for i in range(int(dev_df.shape[0]/20)):
-            n=0
-            while(n!=4):
-                k = np.random.randint(i*20,i*20+20)
-                if(testIndex[k]  != False):
-                    testIndex[k] = False
-                    n+=1   
-        return testIndex
+def boolMaskTrSet(dev_df: pd.DataFrame) -> list:
+    testIndex = [True] * dev_df.shape[0]
+    for i in range(int(dev_df.shape[0] / 20)):
+        n = 0
+        while n != 4:
+            k = np.random.randint(i * 20, i * 20 + 20)
+            if testIndex[k] != False:
+                testIndex[k] = False
+                n += 1
+    return testIndex
 
-def indOutliers()->list:
-    with open("./data/indiciOutlierPadAttivi.txt",'r') as fp:
+
+def indOutliers() -> list:
+    with open("./data/indiciOutlierPadAttivi.txt", "r") as fp:
         ind = [int(index.strip()) for index in fp.readlines()]
     return ind
 
+
 def addPmax(df):
     dim = df.shape
-    colPmax = np.zeros(dim[0],dtype=float)
-    rowPmax = np.zeros((18),dtype=float)
+    colPmax = np.zeros(dim[0], dtype=float)
+    rowPmax = np.zeros((18), dtype=float)
     names = df.columns
-    z =0
+    z = 0
     for k, row in df.iterrows():
         for i in range(18):
             element = f"pmax[{i}]"
-            if(element in names):
+            if element in names:
                 rowPmax[i] = row[element]
         colPmax[z] = np.max(rowPmax)
-        z+=1
-    df.insert(2,"maxPmax",colPmax,True)
+        z += 1
+    df.insert(2, "maxPmax", colPmax, True)
     return df
 
-def randomForestGridSearch(X_train,y_train,X_test,y_test):
+
+def randomForestGridSearch(X_train, y_train, X_test, y_test):
     param_grid = {
-    "n_estimators": [60,80,100, 250, 500],
-    "criterion": ["mse"],
-    "max_features": ["sqrt"],
+        "n_estimators": [60, 80, 100, 250, 500],
+        "criterion": ["mse"],
+        "max_features": ["sqrt"],
     }
     minDist = 10
     listReg = []
-    with open("risultatiTestEstimators.txt",'a') as fp:
+    with open("risultatiTestEstimators.txt", "a") as fp:
         fp.write("Test con sample 0.2 dati con outlier e senza pmax")
         for n_est in param_grid["n_estimators"]:
             for mf in param_grid["max_features"]:
-                regressorRF = RandomForestRegressor(n_estimators=n_est,max_features=mf,random_state=42,n_jobs=-1)
-                regressorRF.fit(X_train,y_train)
+                regressorRF = RandomForestRegressor(
+                    n_estimators=n_est, max_features=mf, random_state=42, n_jobs=-1
+                )
+                regressorRF.fit(X_train, y_train)
                 y_pred = regressorRF.predict(X_test)
                 med = (
-                np.sqrt(np.sum(np.power(y_test - y_pred, 2), axis=1)).sum() / y_pred.shape[0]
+                    np.sqrt(np.sum(np.power(y_test - y_pred, 2), axis=1)).sum()
+                    / y_pred.shape[0]
                 )
-                
+
                 print(f"n_estimators:{n_est} - maxFeatures:{mf} - dist{med}")
                 fp.write(f"n_estimators:{n_est} - maxFeatures:{mf} - dist{med}\n")
+
 
 def personalize_heatmap(
     ax,
@@ -818,7 +827,7 @@ def personalize_heatmap(
     )
 
     ax.set_xlabel(xlabel, fontsize=18, labelpad=8.0)
-    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=20.0)
+    ax.set_ylabel(ylabel, rotation=0, fontsize=18, labelpad=40.0)
     col_labels = [int(col) for col in data_heatmap.columns]
     row_labels = [int(col) for col in data_heatmap.index]
     step = 10
@@ -840,7 +849,7 @@ def personalize_heatmap(
 def personalize_histplot(
     ax,
     fig,
-    data_heatmap: pd.DataFrame,
+    data: pd.DataFrame,
     title: str,
     xlabel: str,
     ylabel: str,
@@ -875,7 +884,7 @@ def personalize_histplot(
 def personalize_boxplot(
     ax,
     fig,
-    data_heatmap: pd.DataFrame,
+    data: pd.DataFrame,
     title: str,
     xlabel: str,
     ylabel: str,
@@ -909,7 +918,7 @@ def personalize_boxplot(
 def personalize_barplot(
     ax,
     fig,
-    data_heatmap: pd.DataFrame,
+    data: pd.DataFrame,
     title: str,
     xlabel: str,
     ylabel: str,
