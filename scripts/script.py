@@ -161,7 +161,7 @@ def analyse_data(data: pd.DataFrame, df_name: str) -> None:
     type_of_columns = ["negpmax", "pmax", "area", "tmax", "rms"]
     for type_col in type_of_columns:
         save_heatmaps(data, type_col, rewrite=False)
-        save_distributions(data, type_col, rewrite=True)
+        save_distributions(data, type_col, rewrite=False)
 
 
 def check_num_event_per_cell(data: pd.DataFrame, rewrite: bool = False) -> None:
