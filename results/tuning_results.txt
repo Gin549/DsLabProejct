@@ -1,0 +1,157 @@
+New Test 0
+
+New Test 4.28791679384579
+
+New Test 8.572872954825831
+
+New Test 12.87605241220677
+n_estimators:80- criterion:squared_error - maxFeatures:sqrt- maxDepth:None - dist Random Forest:4.291073006669095
+n_estimators:80- criterion:squared_error - maxFeatures:sqrt- maxDepth:None - dist Extra treee:4.466797196381115
+
+New Test 0
+
+New Test 4.354524455573342
+
+New Test 8.689473070693879
+
+New Test 13.029584202278933
+n_estimators:80- criterion:squared_error - maxFeatures:1.0- maxDepth:None - dist Random Forest:4.333184596529706
+n_estimators:80- criterion:squared_error - maxFeatures:1.0- maxDepth:None - dist Extra treee:3.92665650712171
+
+New Test 0
+
+New Test 4.292593336645395
+
+New Test 8.574826630300732
+
+New Test 12.8801101808114
+n_estimators:80- criterion:squared_error - maxFeatures:sqrt- maxDepth:30 - dist Random Forest:4.293019893889259
+n_estimators:80- criterion:squared_error - maxFeatures:sqrt- maxDepth:30 - dist Extra treee:4.4742898062582395
+
+New Test 0
+
+New Test 4.354730711691736
+
+New Test 8.689316263981144
+
+New Test 13.029360924898505
+n_estimators:80- criterion:squared_error - maxFeatures:1.0- maxDepth:30 - dist Random Forest:4.333276173169905
+n_estimators:80- criterion:squared_error - maxFeatures:1.0- maxDepth:30 - dist Extra treee:3.9252209373604545
+
+New Test 0
+
+New Test 4.29557260492654
+
+New Test 8.585408097307514
+
+New Test 12.887574466594884
+n_estimators:80- criterion:squared_error - maxFeatures:sqrt- maxDepth:22 - dist Random Forest:4.293388237754642
+n_estimators:80- criterion:squared_error - maxFeatures:sqrt- maxDepth:22 - dist Extra treee:4.660346757986444
+
+New Test 0
+
+New Test 4.355184218017961
+
+New Test 8.689740824705119
+
+New Test 13.029730998146604
+n_estimators:80- criterion:squared_error - maxFeatures:1.0- maxDepth:22 - dist Random Forest:4.333012803245972
+n_estimators:80- criterion:squared_error - maxFeatures:1.0- maxDepth:22 - dist Extra treee:3.935485334573463
+
+New Test 0
+
+New Test 4.262245660573581
+
+New Test 8.51793737018594
+
+New Test 12.791289578648605
+n_estimators:100- criterion:squared_error - maxFeatures:sqrt- maxDepth:None - dist Random Forest:4.262660377321671
+n_estimators:100- criterion:squared_error - maxFeatures:sqrt- maxDepth:None - dist Extra treee:4.429051956958472
+
+New Test 0
+
+New Test 4.3430496219635115
+
+New Test 8.668530561973995
+
+New Test 12.995030457470161
+n_estimators:100- criterion:squared_error - maxFeatures:1.0- maxDepth:None - dist Random Forest:4.32117233474365
+n_estimators:100- criterion:squared_error - maxFeatures:1.0- maxDepth:None - dist Extra treee:3.9087384861692174
+
+New Test 0
+
+New Test 4.2657098548424806
+
+New Test 8.516757326787587
+
+New Test 12.793003008532526
+n_estimators:100- criterion:squared_error - maxFeatures:sqrt- maxDepth:30 - dist Random Forest:4.263527586308305
+n_estimators:100- criterion:squared_error - maxFeatures:sqrt- maxDepth:30 - dist Extra treee:4.43829074383929
+
+New Test 0
+
+New Test 4.343185107614259
+
+New Test 8.668349583061424
+
+New Test 12.994672081564175
+n_estimators:100- criterion:squared_error - maxFeatures:1.0- maxDepth:30 - dist Random Forest:4.32120201947917
+n_estimators:100- criterion:squared_error - maxFeatures:1.0- maxDepth:30 - dist Extra treee:3.9080393274814043
+
+New Test 0
+
+New Test 4.263953010607968
+
+New Test 8.526102001546484
+
+New Test 12.801899565645387
+n_estimators:100- criterion:squared_error - maxFeatures:sqrt- maxDepth:22 - dist Random Forest:4.264273888018048
+n_estimators:100- criterion:squared_error - maxFeatures:sqrt- maxDepth:22 - dist Extra treee:4.628156733040286
+
+New Test 0
+
+New Test 4.34308658163202
+
+New Test 8.668260868440449
+
+New Test 12.994238080555068
+n_estimators:100- criterion:squared_error - maxFeatures:1.0- maxDepth:22 - dist Random Forest:4.320696009503374
+n_estimators:100- criterion:squared_error - maxFeatures:1.0- maxDepth:22 - dist Extra treee:3.9175812833166006
+
+New Test 0
+
+New Test 4.243959923309921
+
+New Test 8.482632281976349
+
+New Test 12.73596871783758
+n_estimators:120- criterion:squared_error - maxFeatures:sqrt- maxDepth:None - dist Random Forest:4.243309191674368
+n_estimators:120- criterion:squared_error - maxFeatures:sqrt- maxDepth:None - dist Extra treee:4.403317188406834
+
+New Test 0
+
+New Test 4.3350642764490965
+
+New Test 8.654076530747295
+
+New Test 12.973420730207858
+n_estimators:120- criterion:squared_error - maxFeatures:1.0- maxDepth:None - dist Random Forest:4.313618242332468
+n_estimators:120- criterion:squared_error - maxFeatures:1.0- maxDepth:None - dist Extra treee:3.896694094524797
+
+New Test 0
+
+New Test 4.247394323452767
+
+New Test 8.481864272058111
+
+New Test 12.738881492242346
+n_estimators:120- criterion:squared_error - maxFeatures:sqrt- maxDepth:30 - dist Random Forest:4.245202851063114
+n_estimators:120- criterion:squared_error - maxFeatures:sqrt- maxDepth:30 - dist Extra treee:4.416403243059881
+
+New Test 0
+
+New Test 4.335038970233189
+
+New Test 8.653753906520578
+
+New Test 12.97279047896328

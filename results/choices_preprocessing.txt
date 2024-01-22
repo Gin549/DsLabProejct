@@ -1,0 +1,4 @@
+_Keep n_estimators = 100, 60 and 80 make the solution less accurat; 250 and 500 improve the solution but not enough around 0.1 improvement
+_Trying with 90,100,110,120, same situation wo keep 100 and stard grid search
+_The max depth on entire dataset is 37, so i try also 30,and 22 that is the 80% and 60% of max
+_After 14097s with criterion "absolute error" is not converged, i am excluding it
