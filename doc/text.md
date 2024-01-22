@@ -52,10 +52,12 @@ The same analysis were perfomed on the other types presented in the listing \ref
 - check feature correlation (?)
 - advantages
 - pmax graphically was the most significative and the same thing was discovered by the analysis of the importances given by the Random Forest
+- triangles (if we haven't reached the 4 pages with the rest)
 
 ### Model selection
 - which models we have tested (possibly link to papers)
 - random forest for the interpretability and for the feature selection (explain the regressor and not the one used for regression)
+- advantages of voting regressor (maybe cite somethings)
 
 ### Hyperparameters tuning
 - hyperparameters tuning
