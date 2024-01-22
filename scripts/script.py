@@ -132,8 +132,8 @@ def get_sampled_data(
         dev_df = pd.read_csv("./data/development.csv", header=0, index_col=False)
         dev_df.sort_values(["x", "y"], ascending=[True, True], inplace=True)
         dev_df = sample_dataframe(dev_df, ratio_keep)
-        dev_df.insert(2, "indiciPerOut", dev_df.index, True)
-        dev_df = addPmax(dev_df)
+        # dev_df.insert(2, "indiciPerOut", dev_df.index, True)
+        # dev_df = addPmax(dev_df)
         if save_to_file:
             dev_df.to_csv("./data/development_sampled.csv", index=False)
 
@@ -190,8 +190,8 @@ def check_num_event_per_cell(data: pd.DataFrame, rewrite: bool = False) -> None:
         data_heatmap,
         title="Number of events per cell",
         title_colorbar="Number of events per cell",
-        xlabel="X [$\\mu m$]",
-        ylabel="Y [$\\mu m$]",
+        xlabel="X ($\\mu m$)",
+        ylabel="Y ($\\mu m$)",
     )
 
     if rewrite:
@@ -233,9 +233,9 @@ def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> Non
             fig,
             data_heatmap,
             title=f"Mean {prefix}[{i}] per (x, y)",
-            title_colorbar=f"{prefix}[{i}] mean [{UNIT_OF_MEASURE_COL[prefix]}]",
-            xlabel="X [$\\mu m$]",
-            ylabel="Y [$\\mu m$]",
+            title_colorbar=f"{prefix}[{i}] mean ({UNIT_OF_MEASURE_COL[prefix]})",
+            xlabel="X ($\\mu m$)",
+            ylabel="Y ($\\mu m$)",
         )
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.png")
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.pdf")
@@ -258,7 +258,8 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
     print(f"\rState: {0}%", end="")
     name_cols: list[str] = []
     for i in range(18):
-        name_cols.append(f"{prefix}[{i}]")
+        if i in COL_PADS:
+            name_cols.append(f"{prefix}[{i}]")
         if prefix == "negpmax":
             continue
 
@@ -276,7 +277,7 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
             fig,
             data,
             f"Distribution {prefix}[{i}]",
-            f"{prefix}[{i}] [{UNIT_OF_MEASURE_COL[prefix]}]",
+            f"{prefix}[{i}] ({UNIT_OF_MEASURE_COL[prefix]})",
             "Density",
         )
         fig = plot.get_figure()
@@ -299,7 +300,7 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
         fig,
         dfm,
         f"{prefix.capitalize()} distributions",
-        f"{prefix} [{UNIT_OF_MEASURE_COL[prefix]}]",
+        f"{prefix} ({UNIT_OF_MEASURE_COL[prefix]})",
         "Feature",
         13,
         9,
