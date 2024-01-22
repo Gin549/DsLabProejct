@@ -69,12 +69,47 @@ In Section \ref{sec:problemOverview}, we have seen how the closer the position t
 - advantages of voting regressor (maybe cite somethings)
 - what do we expect
 
-### Hyperparameters tuning
-- hyperparameters tuning
+As we decided to use a Voting Regressor that combines Random Forest Tree Regressor(RT) and Extra Tree Regressor(ET), for the tuning we had to choose the best parameters for each regressor,
+we decided to do the tuning separately and then choose the best set of hyper-parameters for both of them.
+The hyper-parameters on which we focused were:
+_n_estimators
+_max_features
+_max_depth
+_criterion
+They were the same for the two regressors.
+First, we did some tests on different values of n_estimators, with value = 60,80,100,250,500. We noticed that over 100 our regressors were improving, but not in a considerable way, the distance on test reduced of about scirca=0.01.
+We did this test apart from the grid search because for estimators in the order of 250 or 500, the training of a regressor tooks a long time: scirca=metti un tempo.
+Considering that increasing n_estimators over 100 did not bring a big improvement, we decided to keep its value around 100 during the grid search, also to avoid overfitting.
+Before the grid search, we also did some tests with the criterion "absolute_error", but even with the 10% of training set, we could not fit the model in less than 40 minutes, so we decided not to you use this criterion anymore.
+For the tuning, we implemented our own version of Grid Search, since the "distance" is not one of the metrics of the GridSearchCV in sklearn.
+||parameter|| Values tested 
+||n_estimators|| = [90,100,120]
+||criterion|| = "squared_error""
+||max_features|| = ["sqr",1.0]
+||max_depth|| = 22,30,None
+Since from a test on the whole dataset, with default parameters, the max_depth reached was 38, for the tuning we decided to try also the 80p and the 60p of this depth.
+
+
 - table with what we have tried
 
 
 ## Results
+The tuning showed that for RF and ET the best configuration of hyper-parameters is very similar, the only difference was in "max features", 1.0 for ET and "sqrt" for RF.
+The best configuration for RF was:
+_n_estimators:100
+_criterion: "squared_error"
+_max_features: "sqrt"
+_max_depth:None
+The best configuration for RF was:
+_n_estimators:100
+_criterion: 1.0
+_max_features: "sqrt"
+_max_depth:None
+We did the tuning on the training test using cross-validation, then we tested the results of the two regressors, using the best parameters configuration, on the test set, the 
+distance obtained for the RT scirca = , for ET scirca= , for VR the distance was scirca=
+With the configuration obtained, we trained the VR on the full development set and used it to label the data contained in the evaluation set, the score obtained on the public
+scoreboard was scirca = .
+
 - that the addition of feature pmax_normalized improve all the algorithms (I think that we can avoid saying that the removal of the noise improved the results because it is obvious)
 - what we got from the tuning and the various steps in the choices  
 - mean error for each cell. Maybe some positions are harder to predict(probabily close to the sensors)
