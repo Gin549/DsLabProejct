@@ -64,8 +64,18 @@ In Section \ref{sec:problemOverview}, we have seen how the closer the position t
 - check feature correlation (?)
 
 ### Model selection
-- which models we have tested (possibly link to papers)
-- random forest for the interpretability and for the feature selection (explain the regressor and not the one used for regression)
+We have tested the following models:
+- Random forest: it is an ensemble machine learning technique used for classification and regression. During the training phase, several decision trees are created on different random dataset, sampled with replacement from the original data. For a regression problem, the output of the random forest is the mean of the predictions of the single decision trees. Every split, it is learnt during training considering a criterion, e.g. mean squared error, and possibily on a random subset of the features \cite{paper:randomForest}] \cite{paper:extrRandTree}.\\
+The usage of multiple decision tree leads to a model more robust to noise \cite{paper:RandomForest}. The performance and the training times depends on the number of decision trees. The improvement provided by an increase of the number of decision trees is significant up to a certain number \cite{paper:howManyTree}.\\
+Even if the model is not interpretable as a decision tree, the overall importance of the features can be still be obtained.
+
+- Extra-trees regressor: it is an ensemble machine learning technique. There are only two main differences wih the random forest method. The first is that the every decision tree is built using the whole learning sample. The second is that the split is randomly selected from an uniform distribution inside the candidate feature's empirical range. Then among all the random splits, the best one is chosen and used to grow the tree. \\
+The computational efficiency of the algorithm is an important advantage of this model \cite{paper:extrRandTree}.
+
+
+- Voting regressor: it is an ensemble machine learning technique. It is based on the simple idea of using the average of different regression models. In this way, the advantages of multiple models can be combined. In this case, we used the mean of the random forest and the extra tree regressors. //TODO: cite a paper and change the name, I don't think that voting regressor is the official one
+
+
 - advantages of voting regressor (maybe cite somethings)
 - what do we expect
 
