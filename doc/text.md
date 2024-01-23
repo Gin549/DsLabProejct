@@ -120,21 +120,42 @@ distance obtained for the RT scirca = , for ET scirca= , for VR the distance was
 With the configuration obtained, we trained the VR on the full development set and used it to label the data contained in the evaluation set, the score obtained on the public
 scoreboard was scirca = .
 
-- that the addition of feature pmax_normalized improve all the algorithms (I think that we can avoid saying that the removal of the noise improved the results because it is obvious)
-- what we got from the tuning and the various steps in the choices  
-- mean error for each cell. Maybe some positions are harder to predict(probabily close to the sensors)
-- naive solution
-- comparison with a perfect random forest (comparison with the uncertainty of the tool that fix the position (we don't know what is, I don't think we can do it)
-- comparison with a result with our configurations with a run on the original features without any of our changes. (the evaluation set gives worst results. Locally RT is really bad. Not so much the other two(on 80%), but they give worst performances on the evaluation set)
-- both validation performance and public performance
-- comparison with a naive solution
-- comparison with the two regressors we tune
-- comparison with / without the triangle(if we haven't reached the 4 pages with the rest)
-- comparison with/without the norm 
-- comparison with the baseline on the online platform
+Discussion/Results
+During the discussion every time we refer to local test, they are test done splitting the development set and doing the training on 80% of it and the testing on the 20% of it. Instead to label the evaluation set and upload our submission on the public scoreboard we trained the regressor on 100% of the developement set
+The feature selection process brought an important improvement to our solution, after the removal of the features that we decided to discard during the features analysis,
+our solution went from valore to valore, where the first value is the score that we obtain on public scoreboard.
+Adding the maximum pmax and the normalized pmax for each event improves our solution locally and on the online score board, the results we obtain without them are
+%TODO Aggiungere i valori  
+while addigng them we obtained %TODO aggiungere i valori.
+%what we do in the tuning penso che sia spiegato nei paragrafi precedenti
+With the development set that we obtain after pre-processing, and with the best set of hyper-parameters, the ET regressor alone, obtains lower average distance on the test set respect to the RF alone and the VT , the solution for the three of them are respectively valore
+but when we do our tests online we can see that the best score is obtained with VR, and it is valore.
+We also defined a naive regressor to compare our solution with it. The naive solution just predicts the average between xmax and xmin, where xmax is the maximum value of x in the development dataset and xmin is the minimum, and it does the same reasoning for the y.
+The solution of the our regressor and the naive one are respectively valore, valore.
+Finally we can notice that our proposed solution it is considerably better than the baseline, the difference between the two is valore
+
+-V that the addition of feature pmax_normalized improve all the algorithms (I think that we can avoid saying that the removal of the noise improved the results because it is obvious)
+-V what we got from the tuning and the various steps in the choices  
+-X mean error for each cell. Maybe some positions are harder to predict(probabily close to the sensors)
+-V naive solution
+-X comparison with a perfect random forest (comparison with the uncertainty of the tool that fix the position (we don't know what is, I don't think we can do it)
+-V comparison with a result with our configurations with a run on the original features without any of our changes. (the evaluation set gives worst results. Locally RT is really bad. Not so much the other two(on 80%), but they give worst performances on the evaluation set)
+-V both validation performance and public performance
+-V comparison with a naive solution
+-V comparison with the two regressors we tune
+-X comparison with / without the triangle(if we haven't reached the 4 pages with the rest)
+-X comparison with/without the norm 
+-V comparison with the baseline on the online platform
 - we trained the model on all the dataset at the end
 ## Discussion
+We have shown that our approach performs better tha the other regressors that we have seen during the course.
+Fig. A permit us to show also that the position near the metal bar of the pads were the ones that were harder to predict, in those position we can see that the error is bigger if compared to others not so close to the pads.
+To seek a solution that improves the proposed one it is possibile to expand the grid search with more values for the attributes we selected and also to add more attributes.
+Different and improved results can be found trying different technique that we did not use, for example techniques used in veichle perception and localisation, it is a different field of study but it is still a spatial resolution problem, paper [4] shows Different approaches
+that have been used in this field in the past years
+
 - what can be done more(use NN) do more gridsearccv tests(explain the time limit)
 - what went well
 
 ## Bibliography
+
