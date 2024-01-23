@@ -1,7 +1,7 @@
 # Data Science Lab: Process and methods Group project Winter Call
 
 ## Abstract
-
+RSD is a sensor that tracks the position of passing particles. Throughout this report, we propose a data science pipeline that uses as input several features extracted by the RSD signals, removes the outliers and the noise, and extracts the maximum positive peak and the relative values with respect to it. The preprocessed data is provided to three regression models. The results exceed a naive baseline and the perfomance of the same models on the original data.
 
 ## Problem overview
 \label{sec:problemOverview}
@@ -131,6 +131,7 @@ scoreboard was scirca = .
 - comparison with the two regressors we tune
 - comparison with / without the triangle(if we haven't reached the 4 pages with the rest)
 - comparison with/without the norm 
+- comparison with the baseline on the online platform
 ## Discussion
 - what can be done more(use NN) do more gridsearccv tests(explain the time limit)
 - what went well
