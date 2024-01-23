@@ -92,6 +92,7 @@ We defined that for this problem it is not worth using a number of estimators ov
 For this reason, we tested using a grid search values of n_estimators near 100.\\
 
 The maximum depth obtained by the RT and the ET with default parameters is respectively 38 and 54. We tested the configurations with max_depth None, 60%, and 80% of the previous values. 
+%TODO: put in the subnotes that None means no limits on the maximum depth 
 
 We divided the development dataset 80/20. On the 80%, we performed a cross validation using 4 folds. The metric used was the average Euclidean distance (\ref{eq:EuclideanDist}).\\
 The 20% was used to test the best performing models, before using all the labeled data to build the final regressors.
@@ -129,10 +130,17 @@ Adding the maximum pmax and the normalized pmax for each event improves our solu
 while addigng them we obtained %TODO aggiungere i valori.
 %what we do in the tuning penso che sia spiegato nei paragrafi precedenti
 With the development set that we obtain after pre-processing, and with the best set of hyper-parameters, the ET regressor alone, obtains lower average distance on the test set respect to the RF alone and the VT , the solution for the three of them are respectively valore
+%TODO add an explaination. I think this is due to the fact that probabily online there are new unseen points and the VR performs better on unseen passing positions. Check also that it is true at the end, I don't think it is an ideal situation to have difference best models online and offline
+
 but when we do our tests online we can see that the best score is obtained with VR, and it is valore.
 We also defined a naive regressor to compare our solution with it. The naive solution just predicts the average between xmax and xmin, where xmax is the maximum value of x in the development dataset and xmin is the minimum, and it does the same reasoning for the y.
 The solution of the our regressor and the naive one are respectively valore, valore.
 Finally we can notice that our proposed solution it is considerably better than the baseline, the difference between the two is valore
+%TODO: say that the baseline was in the competition
+
+%TODO: add the comparision with the others in the competition(the PDF on the scientific writing says to put also this)
+
+%TODO: use the right unit of measure for the distances
 
 -V that the addition of feature pmax_normalized improve all the algorithms (I think that we can avoid saying that the removal of the noise improved the results because it is obvious)
 -V what we got from the tuning and the various steps in the choices  
@@ -149,10 +157,16 @@ Finally we can notice that our proposed solution it is considerably better than 
 - we trained the model on all the dataset at the end
 ## Discussion
 We have shown that our approach performs better tha the other regressors that we have seen during the course.
-Fig. A permit us to show also that the position near the metal bar of the pads were the ones that were harder to predict, in those position we can see that the error is bigger if compared to others not so close to the pads.
+%TODO: I think the phrase above should be removed. Reading the report it seems that we have considered only the RT, ET, and VR not others. Also we haven't made the tuning on them and maybe the SVR trained on all the dateset with the right tuning could work better than this. 
+%TODO: say if the performance of the regressors is similar or if one if better for this problem. Say if it could be predicted by the characteristics of the model. If the voting regressors works better say that it confirms that it combines the best from the two models
+Figure A permit us to show also that the position near the metal bar of the pads were the ones that were harder to predict, in those position we can see that the error is bigger if compared to others not so close to the pads.
 To seek a solution that improves the proposed one it is possibile to expand the grid search with more values for the attributes we selected and also to add more attributes.
+%TODO: name which attributes could also be considered. Maybe it is better to say that more configurations for our attributes could be tested. Otherwise it seems that we forgot something 
 Different and improved results can be found trying different technique that we did not use, for example techniques used in veichle perception and localisation, it is a different field of study but it is still a spatial resolution problem, paper [4] shows Different approaches
 that have been used in this field in the past years
+%TODO: I would stay general and say that physical considerations about the particles could help improve the feature extraction
+
+%TODO: conclude saying that we are satisfied with our results comparing them to the baseline 
 
 - what can be done more(use NN) do more gridsearccv tests(explain the time limit)
 - what went well
