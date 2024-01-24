@@ -52,7 +52,12 @@ We have seen from a visual perspective, which are the features that contain most
 An interesting exception is the signal 15. Even if it should be only random noise, the $pmax[15]$ is taken into consideration. Observing Figure \ref{fig:pmax[15]_heatmap}, we see that the values are on average higher on the borders of the sensor and lower near the metal of the pads. \\
 For these reasons, we kept only pmax, negpmax, and the area of the signal corresponding to a pad and the feature $pmax[15]$.\\
 
-%TODO: add how we removed the outliers
+Another important aspect to take into consideration in this phase is the presence of outliers in the training set, from the distributions analysis we could notice that only in the columns of "negpmax" there were the presence of values completely out of scale respect to the other data in the same distribution,
+since the importance of this feature, returned by the random fores regressor, was high, we decide to procede with the removal of the outliers in this case. We did not do the same thing for other columns because from
+the distributions we could not notice evident outliers, so there wea the risk to remove some values that were not common but were not even noise, values that could help in the training of the regressor.
+Seeing that the value of negpmax could space in a big range, close to zero if the paritcle hit was very far from the sensor, or viceversa in the opposite case, we had to be carefull on labeling records as outliers. To avoid the removal data that could be usefull, we used the following method, first
+we detected and saved the minimum "negpmax" for each row, then we analysed this values using the Tukey's Fences technique for outlier detection, this method detects otuliers and extrime outliers, since the number of outliers, in relation to records in the training set, was susbstantial, and removing all of them was not
+improving the quality of the predictions, we decided to remove only the outliers detected as extreme outliers.
 
 In Section \ref{sec:problemOverview}, we have seen how the closer the position to a pad, the higher the corresponding pmax value. For this reason, we introduced a new feature that is the maximum pmax for each event. Then, we added the normalized value of every pmax by the maximum pmax of that event. This is done because this information provides the algorithm a way to infer how near is the position to a pad in comparison to the closest.\\
   
@@ -122,20 +127,19 @@ With the configuration obtained, we trained the VR on the full development set a
 scoreboard was scirca = .
 
 Discussion/Results
-During the discussion every time we refer to local test, they are test done splitting the development set and doing the training on 80% of it and the testing on the 20% of it. Instead to label the evaluation set and upload our submission on the public scoreboard we trained the regressor on 100% of the developement set
+During the discussion every time we refer to local tests, they are test done splitting the development set and doing the training on 80% of it and the testing on the 20% of it. Instead to label the evaluation set and upload our submission on the public scoreboard we trained the regressor on 100% of the developement set
 The feature selection process brought an important improvement to our solution, after the removal of the features that we decided to discard during the features analysis,
-our solution went from valore to valore, where the first value is the score that we obtain on public scoreboard.
-Adding the maximum pmax and the normalized pmax for each event improves our solution locally and on the online score board, the results we obtain without them are
+our solution went from valore to valore, on local test.
+Adding then the maximum pmax and the normalized pmax for each event improves our solution locally and on the online score board, the results we obtain without them are
 %TODO Aggiungere i valori  
 while addigng them we obtained %TODO aggiungere i valori.
 %what we do in the tuning penso che sia spiegato nei paragrafi precedenti
 With the development set that we obtain after pre-processing, and with the best set of hyper-parameters, the ET regressor alone, obtains lower average distance on the test set respect to the RF alone and the VT , the solution for the three of them are respectively valore
-%TODO add an explaination. I think this is due to the fact that probabily online there are new unseen points and the VR performs better on unseen passing positions. Check also that it is true at the end, I don't think it is an ideal situation to have difference best models online and offline
-
-but when we do our tests online we can see that the best score is obtained with VR, and it is valore.
+but when we do our tests online we can see that the best score is obtained with VR, and it is valore. We may assume that this happens because VR take the advantages of the regressors, that are very similar in this case, and merge them, in this way it works better when in the evaluation set it finds data that were not in the training set.
 We also defined a naive regressor to compare our solution with it. The naive solution just predicts the average between xmax and xmin, where xmax is the maximum value of x in the development dataset and xmin is the minimum, and it does the same reasoning for the y.
 The solution of the our regressor and the naive one are respectively valore, valore.
-Finally we can notice that our proposed solution it is considerably better than the baseline, the difference between the two is valore
+Finally we can notice that our proposed solution it is considerably better than the baseline that we can find in the scoreboard, the difference between the two is valore.
+If we compare our result with the ones obtained by other grups on the scoreaboard, we can see that we are on the first third of the table, for sure there is room for improvement considering that the solutions in the first positions are significantly superior. 
 %TODO: say that the baseline was in the competition
 
 %TODO: add the comparision with the others in the competition(the PDF on the scientific writing says to put also this)
@@ -156,20 +160,16 @@ Finally we can notice that our proposed solution it is considerably better than 
 -V comparison with the baseline on the online platform
 - we trained the model on all the dataset at the end
 ## Discussion
-We have shown that our approach performs better tha the other regressors that we have seen during the course.
-%TODO: I think the phrase above should be removed. Reading the report it seems that we have considered only the RT, ET, and VR not others. Also we haven't made the tuning on them and maybe the SVR trained on all the dateset with the right tuning could work better than this. 
-%TODO: say if the performance of the regressors is similar or if one if better for this problem. Say if it could be predicted by the characteristics of the model. If the voting regressors works better say that it confirms that it combines the best from the two models
+From the results we obtained we can see that the predictions done with the VR are closer to the solution than the ones we obtained using the algorithms separetly, this is what we expected from the voting regressor, that with similar algorithms is supposed to exploit the advantages of them and obtain better results.
 Figure A permit us to show also that the position near the metal bar of the pads were the ones that were harder to predict, in those position we can see that the error is bigger if compared to others not so close to the pads.
-To seek a solution that improves the proposed one it is possibile to expand the grid search with more values for the attributes we selected and also to add more attributes.
-%TODO: name which attributes could also be considered. Maybe it is better to say that more configurations for our attributes could be tested. Otherwise it seems that we forgot something 
-Different and improved results can be found trying different technique that we did not use, for example techniques used in veichle perception and localisation, it is a different field of study but it is still a spatial resolution problem, paper [4] shows Different approaches
-that have been used in this field in the past years
+To seek a solution that improves the proposed one it is possibile to expand the grid search testing more configuration for the attributes on which we focused, it could be also interesting to add more attributes to the grid search. 
+Different and improved results could be found trying various technique, methods that exploits other Machine Learning regressor that we did not explore.
+Also additional domain knowledge, like pyhisical consideration on the particle or on the sensonr, could help during the feature extraction.
+% used in veichle perception and localisation, it is a different field of study but it is still a spatial resolution problem, paper [4] shows Different approaches that have been used in this field in the past years
 %TODO: I would stay general and say that physical considerations about the particles could help improve the feature extraction
-
-%TODO: conclude saying that we are satisfied with our results comparing them to the baseline 
+In the end, taking as reference the baseline, we are satisfied by the solution obtained using our approach.
 
 - what can be done more(use NN) do more gridsearccv tests(explain the time limit)
 - what went well
 
 ## Bibliography
-
