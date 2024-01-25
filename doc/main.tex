@@ -167,14 +167,15 @@ The RT and the ET algorithms share all the parameters we considered for the tuni
 - the maximum depth of each decision tree $max\_depth$
 - the splitting criterion $criterion$
 
-For the number of trees, the range $[64, 128]$ is suggested in many datasets\cite{limitNumTrees}. Over a certain threshold, increasing it does not improve significantly the performances, while extending considerably the computational time. \\
-Also for this problem, it is not worth using over 128 estimators. \\
-For this reason, we tested values of n\_estimators near 100. \\
+Over a certain threshold, the increase in the number of decision trees does not improve significantly the performance, while extending considerably the computational time \cite{paper:howManyTree}.// 
+We defined that for this problem it is not worth using a number of estimators over 130.\\  
+For this reason, we tested using a grid search values of n_estimators near 100.\\
 
-The maximum depth obtained by the RT and the ET with default parameters is respectively 38 and 41. We tested the configurations with max\_depth:None\footnote{It does not impose any limits to the maximum depth of the trees}, 60\%, and 80\% of the previous values. 
+The maximum depth obtained by the RT and the ET with default parameters is respectively 38 and 41. We tested the configurations with max\_depth:None, 60\%, and 80\% of the previous values. 
+%TODO: put in the subnotes that None means no limits on the maximum depth 
 
-We divided the development dataset 80/20. On the 80\%, we performed a cross validation using 4 folds. The metric used was the average Euclidean distance (\ref{eq:EuclideanDist}).\\
-The 20\% was used to test the best performing models, before using all the labeled data to build the final regressors.
+We divided the development dataset 80/20. On the 80, we performed a cross validation using 4 folds. The metric used was the average Euclidean distance (\ref{eq:EuclideanDist}).\\
+The 20 was used to test the best performing models, before using all the labeled data to build the final regressors.
 \section{Results}
 
 %The feature selection process brought an important improvement to our solution, after the removal of the features that we decided to discard during the features analysis,
@@ -185,7 +186,7 @@ The 20\% was used to test the best performing models, before using all the label
 %Distance on local test ET : 5.03086466714152
 %Adding then the maximum pmax and the normalized pmax for each event improves our solution locally and on the online score board, the results we obtain
 
-The tuning showed that for RF and ET the best configuration of hyper-parameters is very similar, the only difference was in "max features", 1.0 for ET and "sqrt" for RF.
+The tuning showed that for RF and ET the best configuration of hyper-parameters is very similar, the only difference was in "max features", 1.0 for ET, and "sqrt" for RF.
 The best configuration for RF was:
 
 \begin{itemize}
@@ -202,28 +203,29 @@ The best configuration for ET was:
     \item max\_features: 1.0
     \item max\_depth:None
 \end{itemize}
-In the end each step done from the pre-processing to the tuning improved the value of our solution, that in the end was 4.637 on the pubblic scoreboard, while the the score that is obtained only training the regressors on the original development set is 5.039.
-During the discussion every time we refer to local tests, they are test done splitting the development set and doing the training on 80\% of it and the testing on the 20\% of it. Instead to label the evaluation set and upload our submission on the public scoreboard we trained the regressor on 100\% of the developement set
-One thing that we observed was that, for local test, the distance obtained at the end of the process, for the RT was 4.261, for ET was 3.907 and 3.990 for VR, but when we do our tests online we can see that the best score is obtained with V. We may assume that this happens because VR take the advantages of the regressors, that are very similar in this case, and merge them, in this way it works better when in the evaluation set it finds data that were not in the training set.
+max\_depth: None means that the growth of the trees in the regressors is not limited.
+In the end, each step done from the pre-processing to the tuning improved the value of our solution, it is 4.614 on the public scoreboard, while the score that is obtained by only training the regressors on the original development set without preprocessing and hyperparameters tuning, is 5.039.
+During the discussion every time we refer to local tests, we talk about tests done by splitting the development set and doing the training on 80\% of it and the testing on the 20\% of it. Instead, to label the evaluation set and upload our submission on the public scoreboard we trained the regressor on 100\% of the development set
+One thing that we observed, was that for the local test, the distance obtained at the end of the process, for the RT is 4.141, for ET is  3.830 and it is 3.897 for VR, but when we upload our submission online, we can see that the best score is obtained with VR. We may assume that this happens because VR takes the advantages of the regressors, which are very similar in this case, and merges them, in this way probably it performs better when in the evaluation set it finds data that were not in the training set.
 
 
 
-We also defined a naive regressor to compare our solution with it. The naive solution just predicts the average between xmax and xmin, where xmax is the maximum value of x in the development dataset and xmin is the minimum, and it does the same reasoning for the y.
-The solution of the naive one was valore.
+We also defined a naive regressor to compare our solution with it. The naive solution just predicts the average between $x_{max}$ and $x_{min}$, where $x_{max}$ is the maximum value of $x$ in the development dataset and $x_{min}$ is the minimum, and it does the same reasoning for the $y$.
+The solution using the naive regressor is 242.693.
 
-Finally we can notice that our proposed solution it is considerably better than the baseline that we can find in the scoreboard, the difference between the two is 1.992.
+Finally, we can notice that our proposed solution is considerably better than the baseline that we can find in the scoreboard, the distance between the two is 2.015.
 
-If we compare our result with the ones obtained by other grups on the scoreaboard, we can see that we are on the first third of the table, for sure there is room for improvement considering that the solutions in the first positions are significantly superior.
+If we compare our result with the ones obtained by other groups on the scoreboard, we can see that we are on the first third of the table, for sure there is room for improvement considering that the solutions in the first positions are significantly superior.
 
 \section{Discussion}
-From the results we obtained we can see that the predictions done with the VR are closer to the solution than the ones we obtained using the algorithms separetly, this is what we expected from the voting regressor, that with similar algorithms is supposed to exploit the advantages of them and obtain better results.
-We also wanted to underline that it is possible to notice that prediction error is bigger near the pads of the sensors, in those positions we can see that the error is bigger if compared to others not so close to the pads.
-To seek a solution that improves the proposed one it is possibile to expand the grid search testing more configuration for the attributes on which we focused, it could be also interesting to add more attributes to the grid search. 
-Different and improved results could be found trying various technique, methods that exploits other Machine Learning regressor that we did not explore.
-Also additional domain knowledge, like pyhisical consideration on the particle or on the sensonr, could help during the feature extraction.
+From the results we obtained we can observe that the predictions done with the VR are closer to the solution than the ones we obtained using the algorithms separately, this is what we expected from the voting regressor, which with similar algorithms is supposed to exploit the advantages of them and obtain better results.
+We also wanted to underline that it is possible to see that prediction error is higher near the pads of the sensors if compared to the error in more centered positions.
+To seek a solution that improves the proposed one, one way could be to expand the grid search testing more configurations for the attributes on which we focused, it could be also interesting to add new attributes. 
+Different and improved results could be found by trying various techniques and methods that exploit other Machine Learning regressors that we did not explore.
+Also additional domain knowledge, like physical consideration on particles or on the sensor, could help during the feature extraction.
 % used in veichle perception and localisation, it is a different field of study but it is still a spatial resolution problem, paper [4] shows Different approaches that have been used in this field in the past years
 %TODO: I would stay general and say that physical considerations about the particles could help improve the feature extraction
-In the end, taking as reference the baseline, we are satisfied by the solution obtained using our approach.
+In the end, taking as reference the baseline, we are satisfied with the solution obtained using our approach.
 
 
 \bibliography{bibliography}
