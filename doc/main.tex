@@ -128,7 +128,21 @@ The computational efficiency of the algorithm is an important advantage of this 
 - Voting regressor: it is an ensemble machine learning technique. It is based on the simple idea of using the average of different regression models. In this way, the advantages of multiple models can be combined. In this case, we used the mean of the random forest and the extra tree regressors. %TODO: cite a paper and change the name, I don't think that voting regressor is the official one
 \subsection{Hyperparameters tuning}
 The tuning was performed on the hyperparameters of the RT and the ET. As a consequence, the voting regressor used the best performing configurations of the other two models. \\
-The RT and the ET algorithms share all the parameters we considered for the tuning. They are:
+The RT and the ET algorithms share all the parameters we considered for the tuning, the parameters and their value are in table \ref{tab:tabHP}
+\begin{table}
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Model} & \textbf{Prameters} & \textbf{Values} \\
+        \hline
+        Random Forest & criterion\\ & max\_depth\\ & max\_features & Row 1, Col 3 \\
+        \hline
+        Extra treee & criterion\\ & max\_depth\\ & max\_features & Row 2, Col 3 \\
+        \hline
+    \end{tabular}
+    \caption{Hyper parameters considered}
+    \label{tab:tabHP}
+\end{table}
 - the number of estimators *n\_estimators*
 - the number of features considered at each split *max\_features*
 - the maximum depth of each decision tree *max\_depth*
@@ -144,6 +158,15 @@ The maximum depth obtained by the RT and the ET with default parameters is respe
 We divided the development dataset 80/20. On the 80%, we performed a cross validation using 4 folds. The metric used was the average Euclidean distance (\ref{eq:EuclideanDist}).\\
 The 20% was used to test the best performing models, before using all the labeled data to build the final regressors.
 \section{Results}
+
+%The feature selection process brought an important improvement to our solution, after the removal of the features that we decided to discard during the features analysis,
+%our solution went from 5.039 to valore.
+%5.039 Soluzione online base
+%Distance on local test combined : 4.677499770610218
+%Distance on local test randomF : 4.6320736739355395
+%Distance on local test ET : 5.03086466714152
+%Adding then the maximum pmax and the normalized pmax for each event improves our solution locally and on the online score board, the results we obtain
+
 The tuning showed that for RF and ET the best configuration of hyper-parameters is very similar, the only difference was in "max features", 1.0 for ET and "sqrt" for RF.
 The best configuration for RF was:
 
@@ -162,31 +185,22 @@ The best configuration for ET was:
     \item max\_depth:None
 \end{itemize}
 max\_depth: None means that the growth of the trees in the regressors are not limited.
-We did the tuning on the training test using cross-validation, then we tested the results of the two regressors, using the best parameters configuration, on the test set, the 
-distance obtained for the RT was 4.261,3.907 for ET , 3.990 for VR
-With the configuration obtained, we trained the VR on the full development set and used it to label the data contained in the evaluation set, the score obtained on the public
-scoreboard was 6.637.
+In the end each step done from the pre-processing to the tuning improved the value of our solution, that in the end was 4.637 on the pubblic scoreboard, while the the score that is obtained only training the regressors on the original development set is 5.039.
+During the discussion every time we refer to local tests, they are test done splitting the development set and doing the training on 80\% of it and the testing on the 20\% of it. Instead to label the evaluation set and upload our submission on the public scoreboard we trained the regressor on 100\% of the developement set
+One thing that we observed was that, for local test, the distance obtained at the end of the process, for the RT was 4.261, for ET was 3.907 and 3.990 for VR, but when we do our tests online we can see that the best score is obtained with V. We may assume that this happens because VR take the advantages of the regressors, that are very similar in this case, and merge them, in this way it works better when in the evaluation set it finds data that were not in the training set.
 
-Dring the discussion every time we refer to local tests, they are test done splitting the development set and doing the training on 80\% of it and the testing on the 20\% of it. Instead to label the evaluation set and upload our submission on the public scoreboard we trained the regressor on 100\% of the developement set
-The feature selection process brought an important improvement to our solution, after the removal of the features that we decided to discard during the features analysis,
-our solution went from 5.039 to valore.
-%5.039 Soluzione online base
-%Distance on local test combined : 4.677499770610218
-%Distance on local test randomF : 4.6320736739355395
-%Distance on local test ET : 5.03086466714152
-Adding then the maximum pmax and the normalized pmax for each event improves our solution locally and on the online score board, the results we obtain without them are
-%TODO Aggiungere i valori  
-while addigng them we obtained %TODO aggiungere i valori.
-With the development set that we obtain after pre-processing, and with the best set of hyper-parameters, the ET regressor alone, obtains lower average distance on the test set respect to the RF alone and the VT , the solution for the three of them are 3.90 for ET, 4.26 for RF and 3.99 for VR,
-but when we do our tests online we can see that the best score is obtained with VR, and it is valore. We may assume that this happens because VR take the advantages of the regressors, that are very similar in this case, and merge them, in this way it works better when in the evaluation set it finds data that were not in the training set.
+
+
 We also defined a naive regressor to compare our solution with it. The naive solution just predicts the average between xmax and xmin, where xmax is the maximum value of x in the development dataset and xmin is the minimum, and it does the same reasoning for the y.
-The solution of the our regressor and the naive one are respectively valore, valore.
+The solution of the naive one was valore.
+
 Finally we can notice that our proposed solution it is considerably better than the baseline that we can find in the scoreboard, the difference between the two is 1.992.
+
 If we compare our result with the ones obtained by other grups on the scoreaboard, we can see that we are on the first third of the table, for sure there is room for improvement considering that the solutions in the first positions are significantly superior.
 
 \section{Discussion}
 From the results we obtained we can see that the predictions done with the VR are closer to the solution than the ones we obtained using the algorithms separetly, this is what we expected from the voting regressor, that with similar algorithms is supposed to exploit the advantages of them and obtain better results.
-Figure A permit us to show also that the position near the metal bar of the pads were the ones that were harder to predict, in those position we can see that the error is bigger if compared to others not so close to the pads.
+We also wanted to underline that it is possible to notice that prediction error is bigger near the pads of the sensors, in those positions we can see that the error is bigger if compared to others not so close to the pads.
 To seek a solution that improves the proposed one it is possibile to expand the grid search testing more configuration for the attributes on which we focused, it could be also interesting to add more attributes to the grid search. 
 Different and improved results could be found trying various technique, methods that exploits other Machine Learning regressor that we did not explore.
 Also additional domain knowledge, like pyhisical consideration on the particle or on the sensonr, could help during the feature extraction.
