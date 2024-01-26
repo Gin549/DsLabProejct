@@ -165,7 +165,7 @@ Over a certain threshold, increasing the number of trees does not improve signif
 The maximum depth obtained by the RT and the ET with default parameters is respectively 38 and 41. We tested the configurations with the maximum depth: None\footnote[1]{It does not impose any limits to the maximum depth of the trees}, 60\%, and 80\% of the previous values. 
 
 We divided the development dataset with an 80/20 split. On the 80\%, we performed a cross validation using 4 folds and the average Euclidean distance (\ref{eq:EuclideanDist}) as metric.\\
-The 20\% was used to test the best performing models, before using all the labeled data to build the final regressors.
+The 20\% was used to test the best performing models, before using all the labeled data to build the final estimators.
 \section{Results}
 \label{seq:results}
 %The feature selection process brought an important improvement to our solution, after the removal of the features that we decided to discard during the features analysis,
@@ -193,20 +193,20 @@ The best configurations are shown in Table \ref{tab:tabBestConf}.
     \end{tabular}
 \end{table}
 
-Each step of the pipeline improved the performances of the models. The final result on the public leaderboard\footnote[2]{The training of the final models is done on all the labeled dataset} is $4.614 \mu m$, while the score obtained by only training the regressors on the original development set, without preprocessing and hyperparameter tuning, is $5.039 \mu m$.\\
-After the tuning, we observed locally\footnote[3]{Local results are computed on an 80/20 train/test split} an average distance of $4.141 \mu m$, $3.830 \mu m$, and $3.897 \mu m$, respectively for RT, ET, and VR. On the other hand, the best online score is obtained by VR. A possible explanation is that VR, exploiting the advantages of the other two regressors, performs better on points $(x, y)$ not present in the training set.\\
+Each step of the pipeline improved the performances of the models. The final result on the public leaderboard\footnote[2]{The training of the final models is done on all the labeled dataset} is $4.614 \mu m$, while the score obtained by only training the estimators on the original development set, without preprocessing and hyperparameter tuning, is $5.039 \mu m$.\\
+After the tuning, we observed locally\footnote[3]{Local results are computed on an 80/20 train/test split} an average distance of $4.141 \mu m$, $3.830 \mu m$, and $3.897 \mu m$, respectively for RT, ET, and VR. On the other hand, the best online score is obtained by VR. A possible explanation is that VR, exploiting the advantages of the other two estimators, performs better on points $(x, y)$ not present in the training set.\\
 
 Our public result is in the first third of the public leaderboard. Better results are achievable, but they are possibly obtained with different models. Furthermore, our models give a score that is considerably better than the leaderboard baseline. The improvement in the distance is $2.015 \mu m$.\\
-We also made a comparison with a naive regressor. This model just predicts the average between $x_{max}$ and $x_{min}$, where $x_{max}$ is the maximum value of $x$ in the development dataset and $x_{min}$ is the minimum. The same is done for $y$.
+We also made a comparison with a naive regression model. This estimator just predicts the average between $x_{max}$ and $x_{min}$, where $x_{max}$ is the maximum value of $x$ in the development dataset and $x_{min}$ is the minimum. The same is done for $y$.
 This approach reaches a public score of $243.074 \mu m$. It is orders of magnitude worse than our solution. \\
 
 
 
 \section{Discussion}
-Among the three models, the VR achieves the best performance. This is what we expected since the VR exploits the advantages of the regressors it uses. Its results show that the points immediately near the pads are more difficult to predict.\\ 
+Among the three models, the VR achieves the best performance. This is what we expected since the VR exploits the advantages of the estimators it uses. Its results show that the points immediately near the pads are more difficult to predict.\\ 
 
 Further tests could take into consideration a broader grid search, with more configurations and parameters. Moreover, the proposed approach does not use domain knowledge of particles and of the RSD sensor, which could improve the pipeline. Additionally, other types of models, such as Neural Networks, could be examined.\\
-Nevertheless, we are satisfied with our solution, which outperforms both a naive regressor and the leaderboard baseline.
+Nevertheless, we are satisfied with our solution, which outperforms both a naive regression model and the leaderboard baseline.
 
 
 \bibliography{bibliography}
