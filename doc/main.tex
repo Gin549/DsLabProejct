@@ -123,7 +123,7 @@ For these reasons, we kept only pmax, negpmax, and the area of the signals corre
 
 In Section \ref{sec:problemOverview}, we have observed that only the columns of type negpmax contain many outliers. The magnitude of them is very different from the rest of the values. The same is not valid for the rest of the features.
 We have also discussed that the absolute values are higher when the passing position is close to the sensor. Due to the broad range of x and y, often this does not happen. \\ 
-To avoid the removal of useful data, we used the following procedure: we detected and saved the minimum negpmax for each row and then we analyzed them using the Tukey's Fences method for outlier detection with coefficient k equal to 3. \\
+To avoid the removal of useful data, we used the following procedure: we detected and saved the minimum negpmax for each row and then we analyzed them using the Tukey's Fences method for outlier detection with coefficient k equal to 1.5. \\
 The first step takes the measurements of the nearest pad for each event. In this way, we detected and removed the rows that contained negpmax values extremely different even for the closest pad.
  
 \subsection{Model selection}
@@ -193,7 +193,7 @@ The best configurations are shown in Table \ref{tab:tabBestConf}.
     \end{tabular}
 \end{table}
 
-Each step of the pipeline improved the performances of the models. The final result on the public leaderboard\footnote[2]{The training of the final models is done on all the labeled dataset} is $4.614 \mu m$, while the score obtained by only training the estimators on the original development set, without preprocessing and hyperparameter tuning, is $5.039 \mu m$.\\
+Each step of the pipeline improved the performances of the models. The final result on the public leaderboard\footnote[2]{The training of the final models is done on all the labeled dataset} is $4.613 \mu m$, while the score obtained by only training the estimators on the original development set, without preprocessing and hyperparameter tuning, is $5.039 \mu m$.\\
 After the tuning, we observed locally\footnote[3]{Local results are computed on an 80/20 train/test split} an average distance of $4.141 \mu m$, $3.830 \mu m$, and $3.897 \mu m$, respectively for RT, ET, and VR. On the other hand, the best online score is obtained by VR. A possible explanation is that VR, exploiting the advantages of the other two estimators, performs better on points $(x, y)$ not present in the training set.\\
 
 Our public result is in the first third of the public leaderboard. Better results are achievable, but they are possibly obtained with different models. Furthermore, our models give a score that is considerably better than the leaderboard baseline. The improvement in the distance is $2.015 \mu m$.\\
