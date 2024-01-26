@@ -36,7 +36,7 @@ s328222@studenti.polito.it}
 \maketitle
 
 \begin{abstract}
-RSD is a sensor that tracks the position of passing particles. Throughout this report, we propose a data science pipeline that uses as input several features extracted by the RSD signals, removes the noise and the outliers, and predicts the passing position with a regression model. Three regressors are thoroughly discussed. The results exceed a naive baseline and the performances of the same models on the original data.
+RSD is a sensor that tracks the position of passing particles. Throughout this report, we propose a data science pipeline that uses as input several features extracted by the RSD signals, removes the noise and the outliers, and predicts the passing position with a regression model. Three regression estimators are thoroughly discussed. The results outperform a public baseline and the scores of the same models on the original data.
 \end{abstract}
 
 \section{Problem overview}
@@ -94,23 +94,19 @@ A first observation is that for every $(x, y)$ available in the records, there a
 Figure \ref{fig:pmax[5]_heatmap} represents the mean pmax aggregating by $(x, y)$. Comparing the heat maps of the average pmax of different signals was useful for discerning the noise. An example is the difference between Figures \ref{fig:pmax[5]_heatmap} and \ref{fig:pmax[0]_heatmap}. The latter is clearly noise. \\
 %(put the Figures of pmax[5] and pmax[0])
 The same heat maps were used to identify the pad corresponding to each signal. The mean value of a specific pmax for a given $(x, y)$ is high only if the passing position of the particle is close to the pad. For instance, the pad corresponding to signal 5 is the one surrounded by cells encoded with brighter colors in Figure \ref{fig:pmax[5]_heatmap}.
-The pad and the corresponding signal number are represented in Figure \ref{fig:rsd}.\\
+The pads and the corresponding signal numbers are represented in Figure \ref{fig:rsd}.\\
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[scale=0.30]{images/pmax[5]_distr.pdf}}
 \caption{Distribution of the pmax[5] values in the development set}
 \label{fig:pmax[5]_distr}
 \end{figure}
-The difference between the noise and the signal can be also observed in the distributions of the values. A typical pmax probability function is represented in Figure \ref{fig:pmax[5]_distr}. The noise signals have completely different shapes and range of values. Most of the values have a low magnitude. This occurs because most of the time the pad is distant from the passing position.\\
+The difference between the noise and the signal can be also observed in the distributions of the values. A typical pmax probability function is represented in Figure \ref{fig:pmax[5]_distr}. Most of the values have a low magnitude. This occurs because most of the time the pad is distant from the passing position. The noise signals have completely different shapes and range of values. \\
 
 The same analyses were performed on the other types presented in the listing \ref{lst:typeFeature}. Similar results were obtained for negpmax, area, and tmax. This confirmed that the features that share the same trailing "[n]" derive from the same signal. The tmax fields give less clear visualizations than the other three. On the other hand, the heat maps of the rms values do not present any visual pattern and they are in the order of a few $mV$. The reason is that only a small portion of the signal is characterized by the peaks. Most of the time, the signal has a small magnitude influenced by the noise.\\
 
-%\begin{figure}[htbp]
-%\centerline{\includegraphics[scale=0.35]%{images/negpmax_boxplot.pdf}}
-%\caption{Negpmax boxplots}
-%\label{fig:negpmax_boxplots}
-%\end{figure}
-Another consideration that can be made is on the distributions of negpmax. The density functions have an unusual number of outliers compared to the other features. 
+
+Analyzing the distributions of negpmax, we saw that the density functions have an unusual number of outliers compared to the other features. In addition, the outliers have a different magnitude compared to most values.
 
 \section{Proposed approach}
 \subsection{Preprocessing}
@@ -122,7 +118,7 @@ Another consideration that can be made is on the distributions of negpmax. The d
 \end{figure}
 We have seen which are the features that contain most of the information from a visual perspective. These intuitive considerations were confirmed by an analysis of the importances obtained by a Random Forest regressor with default parameters. Only the pmax, negpmax, and the area of the signal derived from the pads were significantly used by the algorithm.\\ 
 An interesting exception is the signal 15. Even if it should be only random noise, the $pmax[15]$ is taken into consideration. Observing Figure \ref{fig:pmax[15]_heatmap}, we can see that the values are on average higher on the borders of the sensor and lower near the pads. Therefore, it contains useful information that can be used by the models. \\
-For these reasons, we kept only pmax, negpmax, and the area of the signal corresponding to a pad and the feature $pmax[15]$.\\
+For these reasons, we kept only pmax, negpmax, and the area of the signals corresponding to a pad and the feature $pmax[15]$.\\
 
 
 In Section \ref{sec:problemOverview}, we have observed that only the columns of type negpmax contain many outliers. The magnitude of them is very different from the rest of the values. The same is not valid for the rest of the features.
@@ -133,7 +129,7 @@ The first step takes the measurements of the nearest pad for each event. In this
 \subsection{Model selection}
 We have tested the following models:
 \begin{itemize}
-    \item Random forest(RT): it is an ensemble machine learning technique used for classification and regression. During the training phase, several decision trees are created on different random datasets, sampled with replacement from the original data. In a regression problem, the output of the random forest is the mean of the predictions of the single decision trees. Every split is learned during training considering a criterion, e.g. mean squared error, and possibly on a random subset of the features \cite{randomForest} \cite{extraTree}.\\
+    \item Random forest(RT): it is an ensemble machine learning technique used for classification and regression. During the training phase, several decision trees are created on different random datasets, sampled with replacement from the original data. In a regression problem, the output of the random forest is the mean of the predictions of the single decision trees. Every split is learned during training considering a criterion, e.g. mean squared error, and a random subset of the features(possibly all the features\cite{randomForest} \cite{extraTree}).\\
 The usage of multiple decision trees leads to a model more robust to noise \cite{randomForest}. Performance and training time depend on the number of decision trees. The improvement provided by an increase in the number of decision trees is significant up to a certain number \cite{limitNumTrees}.\\
 Even if the model is not as interpretable as a decision tree, the overall importance of the features can still be obtained.
 \item Extra trees regressor(ET): it is an ensemble machine learning technique. There are only two main differences with the random forest method: the first is that every decision tree is built using the whole learning sample, the second is that every split is randomly selected from a uniform distribution inside the candidate feature's empirical range. Then among all the random splits, the best one is chosen and used to grow the tree. \\
@@ -197,7 +193,7 @@ The best configurations are shown in Table \ref{tab:tabBestConf}.
     \end{tabular}
 \end{table}
 
-Each step of the pipeline improved the performances of the models. The final result on the public leaderboard is $4.614 \mu m$\footnote[2]{The training of the final models is done on all the labeled dataset}, while the score obtained by only training the regressors on the original development set, without preprocessing and hyperparameter tuning, is $5.039 \mu m$.\\
+Each step of the pipeline improved the performances of the models. The final result on the public leaderboard\footnote[2]{The training of the final models is done on all the labeled dataset} is $4.614 \mu m$, while the score obtained by only training the regressors on the original development set, without preprocessing and hyperparameter tuning, is $5.039 \mu m$.\\
 After the tuning, we observed locally\footnote[3]{Local results are computed on an 80/20 train/test split} an average distance of $4.141 \mu m$, $3.830 \mu m$, and $3.897 \mu m$, respectively for RT, ET, and VR. On the other hand, the best online score is obtained by VR. A possible explanation is that VR, exploiting the advantages of the other two regressors, performs better on points $(x, y)$ not present in the training set.\\
 
 Our public result is in the first third of the public leaderboard. Better results are achievable, but they are possibly obtained with different models. Furthermore, our models give a score that is considerably better than the leaderboard baseline. The improvement in the distance is $2.015 \mu m$.\\
@@ -209,7 +205,7 @@ This approach reaches a public score of $243.074 \mu m$. It is orders of magnitu
 \section{Discussion}
 Among the three models, the VR achieves the best performance. This is what we expected since the VR exploits the advantages of the regressors it uses. Its results show that the points immediately near the pads are more difficult to predict.\\ 
 
-Further tests could take into consideration a broader grid search, with more configurations and parameters. Moreover, the proposed approach does not take into account domain knowledge of particles and of the RSD sensor, that could be used to improve the pipeline. Additionally, other types of models, such as Neural Networks, could be examined.\\
+Further tests could take into consideration a broader grid search, with more configurations and parameters. Moreover, the proposed approach does not use domain knowledge of particles and of the RSD sensor, which could improve the pipeline. Additionally, other types of models, such as Neural Networks, could be examined.\\
 Nevertheless, we are satisfied with our solution, which outperforms both a naive regressor and the leaderboard baseline.
 
 
