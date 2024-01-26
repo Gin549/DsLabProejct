@@ -70,26 +70,26 @@ class DumbRegressor:
         res[:, 0] *= (self.min_x + self.max_x) / 2
         res[:, 1] *= (self.min_y + self.min_y) / 2
         return res
-
+    
 
 Bestparam_RF = {
-    "n_estimators": 100,
-    "criterion": "squared_error",
-    "max_features": "sqrt",
-    "max_depth": None,
-}
+        "n_estimators": 130,
+        "criterion": "squared_error",
+        "max_features": "sqrt",
+        "max_depth":None
+    }
 Bestparam_ET = {
-    "n_estimators": 100,
-    "criterion": "squared_error",
-    "max_features": 1.0,
-    "max_depth": None,
-}
+        "n_estimators": 130,
+        "criterion": "squared_error",
+        "max_features": 1.0,
+        "max_depth":None
+    }
 
 
 def main():
-    ratio_keep = 1.0  # this value represents the ratio of the development sets that will be used for the training
+    ratio_keep = 1.0 #this value represents the ratio of the development sets that will be used for the training
     # force to reload of the datasets and the processing
-    force_reload = True
+    force_reload = True 
     exit_after_analysis = False
     do_analysis = False
 
@@ -101,7 +101,6 @@ def main():
 
     w_path = WindowsPath(path)
     if force_reload is True or w_path.exists() is False:
-        #
         dev_df, eval_df = get_sampled_data(
             ratio_keep=ratio_keep, force_reload=force_reload, save_to_file=False
         )
@@ -111,8 +110,6 @@ def main():
                 return
         dev_df = feature_selection(dev_df)
         eval_df = feature_selection(eval_df, is_dev=False)
-        # dev_df = feat_extraction(dev_df)
-        # eval_df = feat_extraction(eval_df)
         dev_df.to_csv(path, index=False)
         eval_df.to_csv("./data/evaluation_processed.csv", index=False)
     else:
@@ -161,11 +158,11 @@ def analyse_data(data: pd.DataFrame, df_name: str) -> None:
     data.info()
     print(data.describe())
 
-    check_num_event_per_cell(data, rewrite=False)
+    check_num_event_per_cell(data, rewrite=True)
 
     type_of_columns = ["negpmax", "pmax", "area", "tmax", "rms"]
     for type_col in type_of_columns:
-        save_heatmaps(data, type_col, rewrite=False)
+        save_heatmaps(data, type_col, rewrite=True)
         save_distributions(data, type_col, rewrite=False)
 
 
@@ -195,8 +192,8 @@ def check_num_event_per_cell(data: pd.DataFrame, rewrite: bool = False) -> None:
         data_heatmap,
         title="Number of events per cell",
         title_colorbar="Number of events per cell",
-        xlabel="X [$\\mu m$]",
-        ylabel="Y [$\\mu m$]",
+        xlabel="X ($\\mu m$)",
+        ylabel="Y ($\\mu m$)",  
     )
 
     if rewrite:
@@ -238,9 +235,9 @@ def save_heatmaps(data: pd.DataFrame, prefix: str, rewrite: bool = False) -> Non
             fig,
             data_heatmap,
             title=f"Mean {prefix}[{i}] per (x, y)",
-            title_colorbar=f"{prefix}[{i}] mean [{UNIT_OF_MEASURE_COL[prefix]}]",
-            xlabel="X [$\\mu m$]",
-            ylabel="Y [$\\mu m$]",
+            title_colorbar=f"{prefix}[{i}] mean ({UNIT_OF_MEASURE_COL[prefix]})",
+            xlabel="X ($\\mu m$)",
+            ylabel="Y ($\\mu m$)",
         )
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.png")
         fig.savefig(f"{path.absolute()}\\{prefix}[{i}]_heatmap.pdf")
@@ -263,7 +260,8 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
     print(f"\rState: {0}%", end="")
     name_cols: list[str] = []
     for i in range(18):
-        name_cols.append(f"{prefix}[{i}]")
+        if i in COL_PADS:
+            name_cols.append(f"{prefix}[{i}]")
         if prefix == "negpmax":
             continue
 
@@ -281,7 +279,7 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
             fig,
             data,
             f"Distribution {prefix}[{i}]",
-            f"{prefix}[{i}] [{UNIT_OF_MEASURE_COL[prefix]}]",
+            f"{prefix}[{i}] ({UNIT_OF_MEASURE_COL[prefix]})",
             "Density",
         )
         fig = plot.get_figure()
@@ -304,7 +302,7 @@ def save_distributions(data: pd.DataFrame, prefix: str, rewrite: bool = False) -
         fig,
         dfm,
         f"{prefix.capitalize()} distributions",
-        "Distribution",
+        f"{prefix} ({UNIT_OF_MEASURE_COL[prefix]})",
         "Feature",
         13,
         9,
@@ -329,462 +327,148 @@ def feature_selection(data: pd.DataFrame, is_dev: bool = True) -> pd.DataFrame:
     return data[cols]
 
 
-def generate_triangles_position_and_apply(
-    dev_df: pd.DataFrame,
-) -> dict[int, list[float]]:
-    col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
-
-    cols = ["x", "y"] + col_pads_pmax
-
-    dev_df["triangle"] = dev_df[cols].apply(define_triangle, axis=1)
-
-    triangle_to_xy = (
-        dev_df[["triangle", "x", "y"]]
-        .groupby(
-            "triangle",
-            axis=0,
-        )
-        .mean()
-    )
-
-    triangle_to_xy_dict = {
-        triangle: [
-            triangle_to_xy.loc[triangle, :]["x"],
-            triangle_to_xy.loc[triangle, :]["y"],
-        ]
-        for triangle in list(triangle_to_xy.index)
-    }
-
-    dev_df["x_triag"] = dev_df.apply(
-        lambda x: get_x_triangle(x, triangle_to_xy_dict), axis=1
-    )
-    dev_df["y_triag"] = dev_df.apply(
-        lambda x: get_y_triangle(x, triangle_to_xy_dict), axis=1
-    )
-    return triangle_to_xy_dict
-
-
-def feature_extraction(
-    data: pd.DataFrame, triangle_to_xy: dict[int, list[float]]
-) -> None:
-    cols = [f"pmax[{pad}]" for pad in COL_PADS]
-    data["triangle"] = data[cols].apply(define_triangle, axis=1)
-    print("Unique triangles eval:")
-    print(np.unique(data["triangle"]))
-    data["x_triag"] = data.apply(lambda x: get_x_triangle(x, triangle_to_xy), axis=1)
-    data["y_triag"] = data.apply(lambda x: get_y_triangle(x, triangle_to_xy), axis=1)
-
-
-def define_triangle(row: pd.Series):
-    max_val = 0
-    key_max = frozenset([6, 5, 4])
-    for key in MAP_SET_PADS_TO_TRIANGLE:
-        cols_to_select = [f"pmax[{pas}]" for pas in key]
-        val = row[cols_to_select].mean()
-        if val > max_val:
-            max_val = val
-            key_max = key
-
-    return MAP_SET_PADS_TO_TRIANGLE[key_max]
-
-
-def get_x_triangle(row: pd.Series, triangle_to_xy_dict: dict[int, list[float]]):
-    return triangle_to_xy_dict[int(row["triangle"])][0]
-
-
-def get_y_triangle(row: pd.Series, triangle_to_xy_dict: dict[int, list[float]]):
-    return triangle_to_xy_dict[int(row["triangle"])][1]
-
-
-def feature_extraction_old(dev_df: pd.DataFrame) -> None:
-    col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
-
-    cols = ["x", "y"] + col_pads_pmax
-    sorted_index = (-1 * (dev_df[col_pads_pmax].values)).argsort(axis=1)
-    # only the first 3 are relevant
-    sorted_index = sorted_index[:, :3]
-    sorted_index_pd = pd.DataFrame(sorted_index)
-
-    def combine_indexes(row: pd.Series):
-        global max_num_triangle
-        key = frozenset(COL_PADS[row.values])
-        if key not in MAP_SET_PADS_TO_TRIANGLE:
-            MAP_SET_PADS_TO_TRIANGLE[key] = max_num_triangle + 1
-            max_num_triangle = max_num_triangle + 1
-
-        return MAP_SET_PADS_TO_TRIANGLE[key]
-
-    dev_df["triangle"] = sorted_index_pd.apply(combine_indexes, axis=1)
-    if DEBUGGING:
-        print((dev_df["triangle"] == pd.NA).sum())
-        print(dev_df["triangle"])
-        print(dev_df[col_pads_pmax].head())
-        print(dev_df.tail(20))
-        print(dev_df.shape)
-        print(sorted_index.shape)
-        print(dev_df["triangle"].unique())
-    fig, ax = plt.subplots(1, 1)
-    sns.scatterplot(
-        dev_df, x="x", y="y", hue="triangle", palette="Set1", alpha=0.1, ax=ax
-    )
-    plt.show()
-    fig, ax = plt.subplots(1, 1)
-    sns.scatterplot(
-        dev_df[["triangle", "x", "y"]]
-        .groupby(
-            "triangle",
-            axis=0,
-        )
-        .mean(),
-        x="x",
-        y="y",
-        hue="triangle",
-        palette="Set1",
-        ax=ax,
-    )
-    plt.show()
-    triangle_to_xy = (
-        dev_df[["triangle", "x", "y"]]
-        .groupby(
-            "triangle",
-            axis=0,
-        )
-        .mean()
-    )
-    print("Percentage not starting triangles:")
-    print((dev_df["triangle"] > 14).sum() / dev_df["triangle"].size * 100)
-    print(sorted_index)
-
-    sorted_values = -1 * (np.sort(-1 * (dev_df[col_pads_pmax].values), axis=1))
-    sorted_values = sorted_values[:, :3]
-    print(np.mean(sorted_values, axis=1))
-    print(sorted_values)
-    sns.histplot(
-        x=np.mean(sorted_values, axis=1)[dev_df["triangle"] > 14],
-        kde=True,
-        stat="density",
-        color=sns.color_palette()[0],
-    )
-    sns.histplot(
-        x=np.mean(sorted_values, axis=1)[dev_df["triangle"] <= 14],
-        kde=True,
-        stat="density",
-        color=sns.color_palette()[0],
-    )
-    plt.show()
-
-    def get_x_triangle(row: pd.Series):
-        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
-
-    def get_y_triangle(row: pd.Series):
-        return triangle_to_xy.loc[int(row["triangle"]), :]["y"]
-
-    dev_df["x_triag"] = dev_df.apply(get_x_triangle, axis=1)
-    dev_df["y_triag"] = dev_df.apply(get_y_triangle, axis=1)
-    print(dev_df.head())
-    print(sorted_index)
-
-
-def feature_extraction_old_2(dev_df: pd.DataFrame) -> None:
-    col_pads_pmax = [f"pmax[{pad}]" for pad in COL_PADS]
-
-    cols = ["x", "y"] + col_pads_pmax
-
-    def define_triangle(row: pd.Series):
-        max_val = 0
-        key_max = frozenset([6, 5, 4])
-        for key in MAP_SET_PADS_TO_TRIANGLE:
-            cols_to_select = [f"pmax[{pas}]" for pas in key]
-            val = row[cols_to_select].mean()
-            if val > max_val:
-                max_val = val
-                key_max = key
-
-        return MAP_SET_PADS_TO_TRIANGLE[key_max]
-
-    dev_df["triangle"] = dev_df[cols].apply(define_triangle, axis=1)
-
-    triangle_to_xy = (
-        dev_df[["triangle", "x", "y"]]
-        .groupby(
-            "triangle",
-            axis=0,
-        )
-        .mean()
-    )
-    if DEBUGGING:
-        print((dev_df["triangle"] == pd.NA).sum())
-        print(dev_df["triangle"])
-        print(dev_df[col_pads_pmax].head())
-        print(dev_df.tail(20))
-        print(dev_df.shape)
-        print(dev_df["triangle"].unique())
-        fig, ax = plt.subplots(1, 1)
-        sns.scatterplot(
-            dev_df, x="x", y="y", hue="triangle", palette="Set1", alpha=0.1, ax=ax
-        )
-        plt.show()
-        fig, ax = plt.subplots(1, 1)
-        sns.scatterplot(
-            dev_df[["triangle", "x", "y"]]
-            .groupby(
-                "triangle",
-                axis=0,
-            )
-            .mean(),
-            x="x",
-            y="y",
-            hue="triangle",
-            palette="Set1",
-            ax=ax,
-        )
-        plt.show()
-        print("Percentage not starting triangles:")
-        print((dev_df["triangle"] > 14).sum() / dev_df["triangle"].size * 100)
-
-        sorted_values = -1 * (np.sort(-1 * (dev_df[col_pads_pmax].values), axis=1))
-        sorted_values = sorted_values[:, :3]
-        print(np.mean(sorted_values, axis=1))
-        print(sorted_values)
-        sns.histplot(
-            x=np.mean(sorted_values, axis=1)[dev_df["triangle"] > 14],
-            kde=True,
-            stat="density",
-            color=sns.color_palette()[0],
-        )
-        sns.histplot(
-            x=np.mean(sorted_values, axis=1)[dev_df["triangle"] <= 14],
-            kde=True,
-            stat="density",
-            color=sns.color_palette()[0],
-        )
-        plt.show()
-
-    def get_x_triangle(row: pd.Series):
-        return triangle_to_xy.loc[int(row["triangle"]), :]["x"]
-
-    def get_y_triangle(row: pd.Series):
-        return triangle_to_xy.loc[int(row["triangle"]), :]["y"]
-
-    dev_df["x_triag"] = dev_df.apply(get_x_triangle, axis=1)
-    dev_df["y_triag"] = dev_df.apply(get_y_triangle, axis=1)
-    if DEBUGGING:
-        print(dev_df.head())
 
 
 def regression(dev: pd.DataFrame, eval: pd.DataFrame) -> None:
-    make_analysis = False
-    make_GS = True
-    make_submission = False
+    make_GS = False
+    make_submission = True
+
+
 
     outInd = ind_outliers(dev)
-    print(len(outInd))
     maskTraining = boolMaskTrSet(dev)
     maskTest = [not b for b in maskTraining]
     trainSet = dev.iloc[maskTraining, :]
     TestSet = dev.iloc[maskTest, :]
 
     trainSet = trainSet[~trainSet["indiciPerOut"].isin(outInd)]
+    
 
     y_train = trainSet[["x", "y"]]
     X_train = trainSet.drop(["x", "y", "indiciPerOut"], axis=1)
     y_test = TestSet[["x", "y"]]
     X_test = TestSet.drop(["x", "y", "indiciPerOut"], axis=1)
 
-    print(len(trainSet))
-    print(len(X_test))
-    print(len(X_train))
-    print(X_test.columns)
-    print(X_train.columns)
-    print(eval.columns)
-    print(Counter(maskTest))
-    print(Counter(maskTraining))
 
-    regressorRF = RandomForestRegressor(
-        n_estimators=Bestparam_RF["n_estimators"],
-        criterion=Bestparam_RF["criterion"],
-        max_features=Bestparam_RF["max_features"],
-        max_depth=Bestparam_RF["max_depth"],
-        random_state=42,
-        n_jobs=-1,
-    )
-    regressorET = ExtraTreesRegressor(
-        n_estimators=Bestparam_ET["n_estimators"],
-        criterion=Bestparam_ET["criterion"],
-        max_features=Bestparam_ET["max_features"],
-        max_depth=Bestparam_ET["max_depth"],
-        random_state=42,
-        n_jobs=-1,
-    )
 
-    """regressorRF.fit(X_train,y_train)
+    
+    regressorRF = RandomForestRegressor(n_estimators=Bestparam_RF["n_estimators"],criterion=Bestparam_RF["criterion"],max_features=Bestparam_RF["max_features"],max_depth=Bestparam_RF["max_depth"],random_state=42,n_jobs=-1)
+    regressorET = ExtraTreesRegressor(n_estimators=Bestparam_ET["n_estimators"],criterion=Bestparam_ET["criterion"],max_features=Bestparam_ET["max_features"],max_depth=Bestparam_ET["max_depth"],random_state=42,n_jobs=-1)
+    
+
+
+    regressorRF.fit(X_train,y_train)
     regressorET.fit(X_train,y_train)
-    print("Test 80/20")
+    print("Test 80/20 split")
     test_regressor(X_test,y_test,regressorRF,regressorET)
-    print("fine test 80/20")"""
-    if make_GS:
-        randomForestGridSearch(X_train, y_train, X_test, y_test)
 
-    if make_analysis:
-        various_regressors_analysis(X_train, y_train, X_test, y_test)
+    
 
-    if make_submission:
+
+
+    if(make_GS):
+        custom_GridSearch(X_train, y_train, X_test, y_test) 
+    
+
+    if(make_submission):
         TestSet = dev.iloc[maskTest, :]
         TestSet = TestSet[~TestSet["indiciPerOut"].isin(outInd)]
         y_test = TestSet[["x", "y"]]
         X_test = TestSet.drop(["x", "y", "indiciPerOut"], axis=1)
-        submission(
-            pd.concat([X_train, X_test], axis=0, ignore_index=True),
-            pd.concat([y_train, y_test], axis=0, ignore_index=True),
-            regressorRF,
-            regressorET,
-            eval,
-        )
+        submission(pd.concat([X_train, X_test], axis=0, ignore_index=True),pd.concat([y_train, y_test], axis=0, ignore_index=True),regressorRF,regressorET,eval)    
 
 
-def various_regressors_analysis(
-    X_train: pd.DataFrame,
-    y_train: pd.DataFrame,
-    X_test: pd.DataFrame,
-    y_test: pd.DataFrame,
-):
-    table = PrettyTable()
-    table.field_names = ["Model", "Average Euclidean distance", "Execution time[s]"]
-    regressors = [
-        DumbRegressor(),
-        RandomForestRegressor(random_state=42, max_features="sqrt"),
-        # LinearRegression(),
-        # GridSearchCV(
-        #     DecisionTreeRegressor(),
-        #     {"splitter": ["best", "random"]},
-        # ),
-        # # GridSearchCV(
-        # #     RandomForestRegressor(random_state=42),
-        # #     {
-        # #         "n_estimators": [100, 250, 500],
-        # #         "criterion": ["squared_error", "absolute_error"],
-        # #         "max_features": [1.0, "sqrt", "log2"],
-        # #         "random_state": [42],
-        # #         "max_depth": [6, None],
-        # #         "n_jobs": [-1],
-        # #     },
-        # #     scoring="neg_mean_squared_error",
-        # #     n_jobs=-1,
-        # # ),
-        # make_pipeline(StandardScaler(), Ridge(random_state=42)),
-        # Lasso(random_state=42),
-        # Ridge(random_state=42),
-        # GridSearchCV(
-        #     Ridge(random_state=42),
-        #     {"positive": [True, False], "solver": ["auto", "svd", "cholesky"]},
-        # ),
-    ]
-    names = [
-        "Dumb classifier",
-        "Random forest",
-        # "Linear regression",
-        # "Decision Tree Regressor",
-        # # "",
-        # "Scaler + Ridge",
-        # "Lasso",
-        # "Ridge",
-        # "GridSearchCV on Ridge",
-    ]
 
-    for name_m, regr in zip(names, regressors):
-        start_time = time.time()
-        regr.fit(X_train, y_train)
-        y_pred = regr.predict(X_test)
-        med = (
-            np.sqrt(np.sum(np.power(y_test - y_pred, 2), axis=1)).sum()
-            / y_pred.shape[0]
-        )
-        end_time = time.time()
-        row = [name_m, med, end_time - start_time]
-        table.add_row(row)
-        print(row)
-
-    print(table)
-
-    index_random_forest = names.index("Random forest")
-    analyse_feature_importante(regressors[index_random_forest], X_train.columns)
-    # regr = regressors[index_model_choosen]
-    # print(regr.best_params_)
-
-    # y_test.to_csv(
-    #     path_or_buf="./data/prediction.csv",
-    #     header=["Predicted"],
-    #     index_label="Id",
-    #     index=True,
-    # )
-
+    
 
 def submission(
-    X_train: pd.DataFrame,
-    y_train: pd.DataFrame,
-    regressorRF: RandomForestRegressor,
-    regressorET: ExtraTreesRegressor,
-    eval_df: pd.DataFrame,
-):
-    print(len(X_train))
+        X_train: pd.DataFrame,
+        y_train: pd.DataFrame,
+        regressorRF: RandomForestRegressor,
+        regressorET: ExtraTreesRegressor,
+        eval_df:pd.DataFrame,
+):  
+    
 
-    regressorRF.fit(X_train, y_train)
-    regressorET.fit(X_train, y_train)
+
+    
+
+
+    reg = DumbRegressor()
+    reg.fit(X_train,y_train)
+    y_pred = reg.predict(eval_df)
+
+
+    regressorRF.fit(X_train,y_train)
+    regressorET.fit(X_train,y_train)
+    
 
     y_pred = regressorRF.predict(eval_df)
     print("DoneRF")
     y_pred2 = regressorET.predict(eval_df)
     print("DoneET")
-    y_pred_comb = (y_pred + y_pred2) / 2
+    y_pred_comb = (y_pred+y_pred2)/2
 
-    i = 0
-    with open("submissionCombined100SoloF.csv", "w") as fp:
+
+    i=0
+    with open("submissionCombinedDef.csv","w") as fp:
         fp.write("Id,Predicted")
         for x_y in y_pred_comb:
-            x, y = x_y
-            fp.write(f"\n{i},{round(x,1)}|{round(y,1)}")
-            i += 1
-    i = 0
-    with open("submissionRF100Solof.csv", "w") as fp:
+            x,y = x_y
+            fp.write(f"\n{i},{x}|{y}")
+            i+=1
+    i=0
+    with open("submissionRFDEf.csv","w") as fp:
         fp.write("Id,Predicted")
         for x_y in y_pred:
-            x, y = x_y
-            fp.write(f"\n{i},{round(x,1)}|{round(y,1)}")
-            i += 1
-    i = 0
-    with open("submissionET100Solof.csv", "w") as fp:
+            x,y = x_y
+            fp.write(f"\n{i},{x}|{y}")
+            i+=1        
+    i=0
+    with open("submissionETDef.csv","w") as fp:
         fp.write("Id,Predicted")
         for x_y in y_pred2:
-            x, y = x_y
-            fp.write(f"\n{i},{round(x,1)}|{round(y,1)}")
-            i += 1
+            x,y = x_y
+            fp.write(f"\n{i},{x}|{y}")
+            i+=1 
 
+
+    dubm = DumbRegressor()
+    dubm.fit(X_train,y_train)
+    ydubm = dubm.predict(eval_df)
+
+    i=0
+    with open("submissionNaive.csv","w") as fp:
+        fp.write("Id,Predicted")
+        for x_y in ydubm:
+            x,y = x_y
+            fp.write(f"\n{i},{x}|{y}")
+            i+=1
 
 def feat_extraction(df):
     dim = df.shape
-    colPmax = np.zeros(dim[0], dtype=float)
-    rowPmax = np.zeros((18), dtype=float)
+    colPmax = np.zeros(dim[0],dtype=float)
+    rowPmax = np.zeros((18),dtype=float)
     names = df.columns
     relColumns = []
     pmaxColumns = []
-    z = 0
+    z =0
     for k, row in df.iterrows():
         for i in range(18):
             element = f"pmax[{i}]"
-            if element in names:
+            if(element in names):
                 rowPmax[i] = row[element]
-                if z == 0:
+                if(z==0):
                     newCol = f"relPmax[{i}]"
                     relColumns.append(newCol)
                     pmaxColumns.append(element)
                     df[newCol] = 0
         colPmax[z] = np.max(rowPmax)
         for nc in range(len(relColumns)):
-            df.loc[k, relColumns[nc]] = row[pmaxColumns[nc]] / colPmax[z]
-        z += 1
-    df.insert(0, "maxPmax", colPmax, True)
+            df.loc[k,relColumns[nc]] = row[pmaxColumns[nc]]/colPmax[z]
+        z+=1
+    df.insert(0,"maxPmax",colPmax,True)
     return df
-
 
 def analyse_feature_importante(
     forest: RandomForestRegressor, features_names: list[str]
@@ -870,83 +554,87 @@ def boolMaskTrSet(dev_df: pd.DataFrame) -> list:
     return testIndex
 
 
-def ind_outliers(dev: pd.DataFrame) -> list:
+def ind_outliers(
+        dev: pd.DataFrame
+) -> list:
     path = "./data/indiciOutlierPadAttivi.txt"
     w_path = WindowsPath(path)
     if w_path.exists() is False:
         minPNeg = activePad_outliers(dev)
-        ind = extrimeOutIndex(minPNeg, "ap")
+        ind = extrimeOutIndex(minPNeg,'ap')
         with open("./data/indiciOutlierPadAttivi.txt", "w") as fp:
             for elem in ind:
                 fp.write(f"{elem}\n")
-
+                
     else:
         with open("./data/indiciOutlierPadAttivi.txt", "r") as fp:
             ind = [int(index.strip()) for index in fp.readlines()]
     return ind
 
 
-def extrimeOutIndex(col, case):
-    q1 = np.percentile(col, 25)
-    q3 = np.percentile(col, 75)
-    IQR = q3 - q1
-    if case != "ap":
-        extMinOut = q1 - IQR * 3
-        extMaxOut = q3 + IQR * 3
+def extrimeOutIndex(col,case):
+    q1 = np.percentile(col,25)
+    q3 = np.percentile(col,75)
+    IQR = q3-q1
+    if(case != "ap"):
+        extMinOut = q1-IQR*3
+        extMaxOut = q3+IQR*3
     else:
-        extMinOut = q1 - IQR * 1.5
-        extMaxOut = q3 + IQR * 1.5
-    maskExt = [i for i in range(len(col)) if (col[i] < extMinOut or col[i] > extMaxOut)]
+        extMinOut = q1-IQR*1.5
+        extMaxOut = q3+IQR*1.5
+    maskExt = [i for i in range(len(col)) if(col[i]<extMinOut or col[i]>extMaxOut)]
 
     return maskExt
 
-
 def activePad_outliers(df):
-    minPNeg = np.empty((df.shape[0]), dtype=int)
-    rowPNeg = np.zeros((18), dtype=int)
+    minPNeg = np.empty((df.shape[0]),dtype=int)
+    rowPNeg = np.zeros((18),dtype=int)
     names = df.columns
     for k, row in df.iterrows():
         for i in range(18):
             element = f"negpmax[{i}]"
-            if (
-                element in names
-            ):  # usefull becouse we don't know which column we dropped
+            if(element in names):#usefull becouse we don't know which column we dropped
                 rowPNeg[i] = row[element]
         minPNeg[k] = np.min(rowPNeg)
     return minPNeg
 
 
+
+
 def test_regressor(
-    X_test: pd.DataFrame(),
-    y_test: pd.DataFrame(),
-    RF_regressor: pd.DataFrame(),
-    ET_regressor: pd.DataFrame(),
+        X_test: pd.DataFrame(),
+        y_test: pd.DataFrame(),
+        RF_regressor: pd.DataFrame(),
+        ET_regressor: pd.DataFrame()
 ):
     y_pred_RF = RF_regressor.predict(X_test)
     y_pred_ET = ET_regressor.predict(X_test)
-    y_predict_VR = (y_pred_ET + y_pred_RF) / 2
+    y_predict_VR = (y_pred_ET+y_pred_RF)/2
+
+
+
     med = (
-        np.sqrt(np.sum(np.power(y_test - y_predict_VR, 2), axis=1)).sum()
-        / y_test.shape[0]
-    )
+            np.sqrt(np.sum(np.power(y_test - y_predict_VR, 2), axis=1)).sum() / y_test.shape[0]
+        )
     med2 = (
-        np.sqrt(np.sum(np.power(y_test - y_pred_RF, 2), axis=1)).sum() / y_test.shape[0]
-    )
+            np.sqrt(np.sum(np.power(y_test - y_pred_RF, 2), axis=1)).sum() / y_test.shape[0]
+        )
     med3 = (
-        np.sqrt(np.sum(np.power(y_test - y_pred_ET, 2), axis=1)).sum() / y_test.shape[0]
-    )
+            np.sqrt(np.sum(np.power(y_test - y_pred_ET, 2), axis=1)).sum() / y_test.shape[0]
+        )
     print(f"Distance on local test combined : {med}")
     print(f"Distance on local test randomF : {med2}")
     print(f"Distance on local test ET : {med3}")
 
 
-def randomForestGridSearch(X_train, y_train, X_test, y_test):
+
+def custom_GridSearch(X_train,y_train,X_test,y_test):
     param_grid = {
-        "n_estimators": [100],
-        "criterion": ["squared_error"],
-        "max_features": ["sqrt", 1.0],
-        "max_depth_RF": [None, 30, 22],
-        "max_depth_ET": [None, 33, 25],
+    "n_estimators": [100],
+    "criterion": ["squared_error"],
+    "max_features": ["sqrt",1.0],
+    "max_depth_RF":[None,30,22],
+    "max_depth_ET":[None,33,25]
     }
 
     print(X_train.columns)
@@ -954,7 +642,7 @@ def randomForestGridSearch(X_train, y_train, X_test, y_test):
     print(len(X_train))
 
     indeces_Kfold = training_split(X_train)
-    with open("risultatiTestEstimatorsNew.txt", "a") as fp:
+    with open("risultatiTestEstimatorsNew.txt",'a') as fp:
         fp.write("\nTest 80/20 split\n")
         for n_est in param_grid["n_estimators"]:
             for md in range(len(param_grid["max_depth_RF"])):
@@ -964,78 +652,38 @@ def randomForestGridSearch(X_train, y_train, X_test, y_test):
                         medET = 0
                         for lisInd in indeces_Kfold:
                             print(f"\nNew Test {med}")
-                            maskK = np.array(X_train.index.isin(lisInd))
-                            regressorRF = RandomForestRegressor(
-                                n_estimators=n_est,
-                                criterion=crt,
-                                max_features=mf,
-                                max_depth=param_grid["max_depth_RF"][md],
-                                random_state=42,
-                                n_jobs=-1,
-                            )
-                            regressorRF.fit(
-                                X_train.iloc[~maskK, :], y_train.iloc[~maskK, :]
-                            )
-                            regressorET = ExtraTreesRegressor(
-                                n_estimators=n_est,
-                                criterion=crt,
-                                max_features=mf,
-                                max_depth=param_grid["max_depth_ET"][md],
-                                random_state=42,
-                                n_jobs=-1,
-                            )
-
-                            regressorET.fit(
-                                X_train.iloc[~maskK, :], y_train.iloc[~maskK, :]
-                            )
-                            y_predRF = regressorRF.predict(X_train.iloc[maskK, :])
-                            y_predET = regressorET.predict(X_train.iloc[maskK, :])
+                            maskK = np.array(X_train.index.isin(lisInd))                      
+                            regressorRF = RandomForestRegressor(n_estimators=n_est,criterion=crt,max_features=mf,max_depth=param_grid["max_depth_RF"][md],random_state=42,n_jobs=-1)
+                            regressorRF.fit(X_train.iloc[~maskK,:],y_train.iloc[~maskK,:])
+                            regressorET = ExtraTreesRegressor(n_estimators=n_est,criterion=crt,max_features=mf,max_depth=param_grid["max_depth_ET"][md],random_state=42,n_jobs=-1) 
+                            regressorET.fit(X_train.iloc[~maskK,:],y_train.iloc[~maskK,:])
+                            y_predRF = regressorRF.predict(X_train.iloc[maskK,:])
+                            y_predET = regressorET.predict(X_train.iloc[maskK,:])
                             med += (
-                                np.sqrt(
-                                    np.sum(
-                                        np.power(y_train.iloc[maskK, :] - y_predRF, 2),
-                                        axis=1,
-                                    )
-                                ).sum()
-                                / y_predRF.shape[0]
+                            np.sqrt(np.sum(np.power(y_train.iloc[maskK,:] - y_predRF, 2), axis=1)).sum() / y_predRF.shape[0]
                             )
-                            medET += (
-                                np.sqrt(
-                                    np.sum(
-                                        np.power(y_train.iloc[maskK, :] - y_predET, 2),
-                                        axis=1,
-                                    )
-                                ).sum()
-                                / y_predRF.shape[0]
+                            medET+= (
+                            np.sqrt(np.sum(np.power(y_train.iloc[maskK,:] - y_predET, 2), axis=1)).sum() / y_predRF.shape[0]
                             )
-                        med = med / len(indeces_Kfold)
-                        medET = medET / len(indeces_Kfold)
-                        print(
-                            f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_RF'][md]} - dist Random Forest:{med}"
-                        )
-                        fp.write(
-                            f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_RF'][md]} - dist Random Forest:{med}\n"
-                        )
-                        print(
-                            f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_ET'][md]} - dist Extra treee:{medET}"
-                        )
-                        fp.write(
-                            f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_ET'][md]} - dist Extra tree:{medET}\n"
-                        )
+                        med = med/len(indeces_Kfold)
+                        medET = medET/len(indeces_Kfold)
+                        print(f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_RF'][md]} - dist Random Forest:{med}")
+                        fp.write(f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_RF'][md]} - dist Random Forest:{med}\n")
+                        print(f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_ET'][md]} - dist Extra treee:{medET}")
+                        fp.write(f"n_estimators:{n_est}- criterion:{crt} - maxFeatures:{mf}- maxDepth:{param_grid['max_depth_ET'][md]} - dist Extra tree:{medET}\n")
 
 
-def training_split(training_set: pd.DataFrame):
+def training_split(
+        training_set: pd.DataFrame
+):  
     list_ind_split = []
-    training_set_ind = training_set.index.tolist()
+    training_set_ind =  training_set.index.tolist()
     train_test_split = random.sample(training_set_ind, len(training_set_ind))
-    num_ind_split = int(len(train_test_split) / 4)
+    num_ind_split = int(len(train_test_split)/4)
     for i in range(3):
-        list_ind_split.append(
-            train_test_split[(i * num_ind_split) : (i * num_ind_split + num_ind_split)]
-        )
-    list_ind_split.append(train_test_split[(i) * num_ind_split + num_ind_split :])
+        list_ind_split.append(train_test_split[(i*num_ind_split):(i*num_ind_split+num_ind_split)])
+    list_ind_split.append(train_test_split[(i)*num_ind_split+num_ind_split:]) 
     return list_ind_split
-
 
 def personalize_heatmap(
     ax,
