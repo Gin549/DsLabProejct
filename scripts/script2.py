@@ -20,28 +20,9 @@ random.seed(42)
 
 simplefilter(action="ignore", category=FutureWarning)
 
-DEBUGGING: bool = False
+
 NUM_EVENT_PER_POS = 100
-MAP_SET_PADS_TO_TRIANGLE = defaultdict(
-    int,
-    {
-        frozenset([6, 5, 4]): 1,
-        frozenset([4, 5, 3]): 2,
-        frozenset([4, 3, 2]): 3,
-        frozenset([3, 2, 1]): 4,
-        frozenset([6, 8, 5]): 5,
-        frozenset([5, 3, 13]): 6,
-        frozenset([3, 13, 1]): 7,
-        frozenset([8, 5, 10]): 8,
-        frozenset([5, 10, 13]): 9,
-        frozenset([13, 1, 14]): 10,
-        frozenset([8, 9, 10]): 11,
-        frozenset([10, 11, 13]): 12,
-        frozenset([11, 13, 14]): 13,
-        frozenset([9, 10, 11]): 14,
-    },
-)
-max_num_triangle: int = 14
+
 COL_PADS = np.array([1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14], dtype=np.int16)
 UNIT_OF_MEASURE_COL = {
     "pmax": "mV",
@@ -433,42 +414,19 @@ def submission(
             i+=1 
 
 
-    dubm = DumbRegressor()
-    dubm.fit(X_train,y_train)
-    ydubm = dubm.predict(eval_df)
+    naiveReg = DumbRegressor()
+    naiveReg.fit(X_train,y_train)
+    y_naive = naiveReg.predict(eval_df)
 
     i=0
     with open("submissionNaive.csv","w") as fp:
         fp.write("Id,Predicted")
-        for x_y in ydubm:
+        for x_y in y_naive:
             x,y = x_y
             fp.write(f"\n{i},{x}|{y}")
             i+=1
 
-def feat_extraction(df):
-    dim = df.shape
-    colPmax = np.zeros(dim[0],dtype=float)
-    rowPmax = np.zeros((18),dtype=float)
-    names = df.columns
-    relColumns = []
-    pmaxColumns = []
-    z =0
-    for k, row in df.iterrows():
-        for i in range(18):
-            element = f"pmax[{i}]"
-            if(element in names):
-                rowPmax[i] = row[element]
-                if(z==0):
-                    newCol = f"relPmax[{i}]"
-                    relColumns.append(newCol)
-                    pmaxColumns.append(element)
-                    df[newCol] = 0
-        colPmax[z] = np.max(rowPmax)
-        for nc in range(len(relColumns)):
-            df.loc[k,relColumns[nc]] = row[pmaxColumns[nc]]/colPmax[z]
-        z+=1
-    df.insert(0,"maxPmax",colPmax,True)
-    return df
+
 
 def analyse_feature_importante(
     forest: RandomForestRegressor, features_names: list[str]
