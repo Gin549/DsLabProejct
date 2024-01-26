@@ -588,7 +588,7 @@ def test_regressor(
 
 def custom_GridSearch(X_train,y_train,X_test,y_test):
     param_grid = {
-    "n_estimators": [100],
+    "n_estimators": [72,100,128],
     "criterion": ["squared_error"],
     "max_features": ["sqrt",1.0],
     "max_depth_RF":[None,30,22],
