@@ -1,5 +1,5 @@
 # Trajectories particles
-Data Science Lab Project
+##Data Science Lab Project
 
 For this project, we developed a regression pipeline to predict the position of a particle passing through a flat sensor, specifically estimating the x-y coordinates on this surface.
 
